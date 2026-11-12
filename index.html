@@ -4,34 +4,112 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Alpine Rush 3D</title>
+<title>Alpine Rush - Ski Simulator</title>
+
 <style>
-  body { margin: 0; overflow: hidden; background: #9ac9e8; font-family: Arial; }
-  #hud {
-    position: absolute; top: 18px; left: 20px; color: white;
-    font-size: 19px; font-weight: bold; text-shadow: 1px 2px 4px #234;
-    pointer-events: none;
-  }
-  #help {
-    position: absolute; bottom: 18px; left: 20px; color: white;
-    text-shadow: 1px 2px 4px #234; font-size: 14px;
-  }
-  #message {
-    position: absolute; inset: 0; display: grid; place-items: center;
-    color: white; font-size: 30px; font-weight: bold;
-    text-shadow: 2px 3px 5px #234; pointer-events: none;
-  }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #a9d4ed;
+  font-family: Arial, sans-serif;
+}
+#hud {
+  position: absolute;
+  top: 20px;
+  left: 22px;
+  color: white;
+  text-shadow: 0 2px 8px #17334d;
+  pointer-events: none;
+}
+#logo {
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  margin-bottom: 12px;
+}
+.stat {
+  font-size: 17px;
+  margin: 7px 0;
+  font-weight: bold;
+}
+#trickText {
+  color: #ffe17c;
+  font-size: 20px;
+  margin-top: 10px;
+}
+#controls {
+  position: absolute;
+  bottom: 18px;
+  left: 20px;
+  color: white;
+  text-shadow: 0 2px 5px #17334d;
+  font-size: 13px;
+  line-height: 1.8;
+}
+#centerMessage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  color: white;
+  text-shadow: 0 3px 12px #18344d;
+  pointer-events: none;
+  text-align: center;
+}
+#centerMessage h1 {
+  font-size: clamp(35px, 7vw, 76px);
+  margin: 0;
+  letter-spacing: 5px;
+}
+#centerMessage p {
+  font-size: 18px;
+  font-weight: bold;
+}
+#progressOuter {
+  position: absolute;
+  top: 20px;
+  right: 22px;
+  width: 150px;
+  height: 8px;
+  background: #ffffff66;
+  border-radius: 10px;
+  overflow: hidden;
+}
+#progress {
+  height: 100%;
+  width: 0%;
+  background: white;
+}
 </style>
 </head>
+
 <body>
 <div id="hud">
-  <div>ALPINE RUSH</div>
-  <div id="speed">Speed: 0 km/h</div>
-  <div id="score">Score: 0</div>
-  <div id="tricks">Tricks: 0</div>
+  <div id="logo">ALPINE RUSH</div>
+  <div class="stat" id="speed">SPEED 0 KM/H</div>
+  <div class="stat" id="score">SCORE 0</div>
+  <div class="stat" id="distance">DISTANCE 0 M</div>
+  <div class="stat" id="tricks">TRICKS 0</div>
+  <div id="trickText"></div>
 </div>
-<div id="help">A/D or ←/→: Steer | SPACE: Jump | F: Flip | R: Restart</div>
-<div id="message">3D SKIING</div>
+
+<div id="progressOuter"><div id="progress"></div></div>
+
+<div id="controls">
+  A / D or ← / → — Steer<br>
+  W / S — Speed up / Slow down<br>
+  SPACE — Jump<br>
+  F — Backflip while airborne<br>
+  R — Restart
+</div>
+
+<div id="centerMessage">
+  <h1>ALPINE RUSH</h1>
+  <p>PRESS SPACE TO START</p>
+</div>
 
 <script type="importmap">
 {
@@ -44,86 +122,302 @@
 <script type="module">
 import * as THREE from "three";
 
-// SCENE
+// ------------------------------
+// SETUP
+// ------------------------------
+
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x9ac9e8);
-scene.fog = new THREE.Fog(0x9ac9e8, 70, 260);
+scene.background = new THREE.Color(0x9bc9e8);
+scene.fog = new THREE.Fog(0xb5d8eb, 100, 420);
 
 const camera = new THREE.PerspectiveCamera(
-  70, innerWidth / innerHeight, 0.1, 500
+  67, innerWidth / innerHeight, 0.1, 1000
 );
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.15;
 document.body.appendChild(renderer.domElement);
 
-// LIGHTING
-scene.add(new THREE.HemisphereLight(0xffffff, 0x829bb2, 2));
+scene.add(new THREE.HemisphereLight(0xe6f5ff, 0x647b91, 2));
 
-const sun = new THREE.DirectionalLight(0xffffff, 2.2);
-sun.position.set(-30, 60, 40);
+const sun = new THREE.DirectionalLight(0xffffff, 2.4);
+sun.position.set(-80, 120, 70);
 sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -100;
+sun.shadow.camera.right = 100;
+sun.shadow.camera.top = 100;
+sun.shadow.camera.bottom = -100;
 scene.add(sun);
 
-// MOUNTAIN
-function mountainHeight(x, z) {
-  return 7 + z * 0.025
-    + Math.sin(z * 0.045) * 1.5
-    + Math.sin(x * 0.12 + z * 0.025) * 0.8;
+// ------------------------------
+// MOUNTAIN AND TERRAIN
+// ------------------------------
+
+const COURSE_LENGTH = 2000;
+const FINISH_Z = -COURSE_LENGTH;
+
+const ramps = [-250, -590, -940, -1320, -1660];
+
+function rampHeight(z, center) {
+  const width = 15;
+  const d = (z - center) / width;
+  return 5.5 * Math.exp(-d * d);
 }
 
-const positions = [];
-const indices = [];
-const segmentsX = 80;
-const segmentsZ = 400;
+function groundHeight(x, z) {
+  let h =
+    22 - z * 0.027 +
+    Math.sin(z * 0.025) * 1.1 +
+    Math.sin(x * 0.12 + z * 0.018) * 0.7 +
+    Math.sin(x * 0.045) * 0.5;
 
-for (let iz = 0; iz <= segmentsZ; iz++) {
-  for (let ix = 0; ix <= segmentsX; ix++) {
-    const x = -50 + ix * 100 / segmentsX;
-    const z = 30 - iz * 430 / segmentsZ;
-    positions.push(x, mountainHeight(x, z), z);
+  for (const ramp of ramps) {
+    h += rampHeight(z, ramp);
+  }
+
+  return h;
+}
+
+// Build a very long mountain, all the way to the finish.
+const terrainPositions = [];
+const terrainIndices = [];
+const NX = 90;
+const NZ = 1200;
+
+for (let iz = 0; iz <= NZ; iz++) {
+  const z = 90 - iz * (COURSE_LENGTH + 180) / NZ;
+
+  for (let ix = 0; ix <= NX; ix++) {
+    const x = -55 + ix * 110 / NX;
+    terrainPositions.push(x, groundHeight(x, z), z);
   }
 }
 
-for (let iz = 0; iz < segmentsZ; iz++) {
-  for (let ix = 0; ix < segmentsX; ix++) {
-    const a = iz * (segmentsX + 1) + ix;
+for (let iz = 0; iz < NZ; iz++) {
+  for (let ix = 0; ix < NX; ix++) {
+    const a = iz * (NX + 1) + ix;
     const b = a + 1;
-    const c = a + segmentsX + 1;
+    const c = a + NX + 1;
     const d = c + 1;
-    indices.push(a, c, b, b, c, d);
+    terrainIndices.push(a, c, b, b, c, d);
   }
 }
 
-const terrainGeometry = new THREE.BufferGeometry();
-terrainGeometry.setAttribute(
-  "position", new THREE.Float32BufferAttribute(positions, 3)
+const terrainGeo = new THREE.BufferGeometry();
+terrainGeo.setAttribute(
+  "position",
+  new THREE.Float32BufferAttribute(terrainPositions, 3)
 );
-terrainGeometry.setIndex(indices);
-terrainGeometry.computeVertexNormals();
+terrainGeo.setIndex(terrainIndices);
+terrainGeo.computeVertexNormals();
 
-const snow = new THREE.Mesh(
-  terrainGeometry,
+const terrain = new THREE.Mesh(
+  terrainGeo,
   new THREE.MeshStandardMaterial({
-    color: 0xeaf5ff,
+    color: 0xf0f7ff,
     roughness: 0.95,
     side: THREE.DoubleSide
   })
 );
-snow.receiveShadow = true;
-scene.add(snow);
+terrain.receiveShadow = true;
+scene.add(terrain);
 
-// SKIER
+// Mountain walls on either side
+const wallMaterial = new THREE.MeshStandardMaterial({
+  color: 0xc9deeb,
+  roughness: 1
+});
+
+for (const side of [-1, 1]) {
+  const wall = new THREE.Mesh(
+    new THREE.BoxGeometry(20, 70, COURSE_LENGTH + 200),
+    wallMaterial
+  );
+  wall.position.set(side * 65, 16, -COURSE_LENGTH / 2);
+  scene.add(wall);
+}
+
+// Distant mountain peaks
+const peakMaterial = new THREE.MeshStandardMaterial({
+  color: 0xdcebf5,
+  roughness: 1
+});
+
+for (let i = 0; i < 24; i++) {
+  const peak = new THREE.Mesh(
+    new THREE.ConeGeometry(18 + Math.random() * 20,
+      45 + Math.random() * 45, 5),
+    peakMaterial
+  );
+  peak.position.set(
+    (Math.random() - 0.5) * 400,
+    25 + Math.random() * 25,
+    -100 - Math.random() * 2200
+  );
+  scene.add(peak);
+}
+
+// ------------------------------
+// TREES AND ROCKS
+// ------------------------------
+
+const obstacles = [];
+const treeGreen = [
+  0x164b3b, 0x205a43, 0x286448, 0x315c49
+];
+
+const trunkMat = new THREE.MeshStandardMaterial({
+  color: 0x65432d
+});
+
+function addTree(x, z) {
+  const group = new THREE.Group();
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.17, 0.25, 1.8, 7),
+    trunkMat
+  );
+  trunk.position.y = 0.9;
+  trunk.castShadow = true;
+  group.add(trunk);
+
+  for (let i = 0; i < 3; i++) {
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(1.25 - i * 0.23, 2.0, 7),
+      new THREE.MeshStandardMaterial({
+        color: treeGreen[Math.floor(Math.random() * treeGreen.length)]
+      })
+    );
+    cone.position.y = 1.9 + i * 0.85;
+    cone.castShadow = true;
+    group.add(cone);
+  }
+
+  group.position.set(x, groundHeight(x, z), z);
+  scene.add(group);
+  obstacles.push({ x, z, radius: 1.15, type: "tree" });
+}
+
+function addRock(x, z) {
+  const rock = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(0.85, 1),
+    new THREE.MeshStandardMaterial({
+      color: 0x899ba8,
+      roughness: 1
+    })
+  );
+  rock.position.set(x, groundHeight(x, z) + 0.5, z);
+  rock.scale.set(1.2, 0.8, 1);
+  rock.castShadow = true;
+  scene.add(rock);
+  obstacles.push({ x, z, radius: 1.25, type: "rock" });
+}
+
+for (let z = -35; z > FINISH_Z + 30; z -= 13) {
+  for (const side of [-1, 1]) {
+    if (Math.random() > 0.15) {
+      addTree(side * (14 + Math.random() * 25), z);
+    }
+  }
+
+  if (Math.random() > 0.75) {
+    addRock((Math.random() - 0.5) * 18, z - 4);
+  }
+}
+
+// ------------------------------
+// JUMPS AND COURSE GATES
+// ------------------------------
+
+const gateMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffb832,
+  emissive: 0x593000
+});
+
+const gates = [];
+
+for (let z = -130; z > FINISH_Z + 80; z -= 115) {
+  const x = (Math.random() - 0.5) * 12;
+  const gate = new THREE.Group();
+
+  for (const side of [-1, 1]) {
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.12, 3.4, 8),
+      gateMaterial
+    );
+    post.position.set(side * 2.1, 1.7, 0);
+    gate.add(post);
+  }
+
+  const bar = new THREE.Mesh(
+    new THREE.BoxGeometry(4.3, 0.16, 0.16),
+    gateMaterial
+  );
+  bar.position.y = 3.3;
+  gate.add(bar);
+
+  gate.position.set(x, groundHeight(x, z), z);
+  scene.add(gate);
+  gates.push({ x, z, passed: false });
+}
+
+// Finish arch
+const finish = new THREE.Group();
+const finishMat = new THREE.MeshStandardMaterial({
+  color: 0x2b5d91,
+  emissive: 0x142b48
+});
+
+for (const side of [-1, 1]) {
+  const post = new THREE.Mesh(
+    new THREE.BoxGeometry(0.6, 7, 0.6), finishMat
+  );
+  post.position.set(side * 7, 3.5, 0);
+  finish.add(post);
+}
+
+const finishBar = new THREE.Mesh(
+  new THREE.BoxGeometry(14.5, 0.7, 0.7), finishMat
+);
+finishBar.position.y = 7;
+finish.add(finishBar);
+finish.position.set(0, groundHeight(0, FINISH_Z), FINISH_Z);
+scene.add(finish);
+
+// ------------------------------
+// SKIER MODEL
+// ------------------------------
+
 const skier = new THREE.Group();
 scene.add(skier);
 
-const dark = new THREE.MeshStandardMaterial({ color: 0x172b45 });
-const jacket = new THREE.MeshStandardMaterial({ color: 0xe84d36 });
-const helmet = new THREE.MeshStandardMaterial({ color: 0xffd447 });
+const body = new THREE.Group();
+skier.add(body);
 
-function part(parent, geometry, material, x, y, z) {
+const jacketMat = new THREE.MeshStandardMaterial({
+  color: 0xf04d36,
+  roughness: 0.7
+});
+const pantsMat = new THREE.MeshStandardMaterial({
+  color: 0x172d48
+});
+const helmetMat = new THREE.MeshStandardMaterial({
+  color: 0xffcf45,
+  metalness: 0.15,
+  roughness: 0.4
+});
+const skiMat = new THREE.MeshStandardMaterial({
+  color: 0x192a3b,
+  roughness: 0.4
+});
+
+function makePart(parent, geometry, material, x, y, z) {
   const mesh = new THREE.Mesh(geometry, material);
   mesh.position.set(x, y, z);
   mesh.castShadow = true;
@@ -131,222 +425,434 @@ function part(parent, geometry, material, x, y, z) {
   return mesh;
 }
 
-part(skier, new THREE.BoxGeometry(0.48, 0.85, 0.35),
-  jacket, 0, 0.85, 0);
+// Body
+makePart(body, new THREE.BoxGeometry(0.55, 0.8, 0.4),
+  jacketMat, 0, 1.05, 0);
 
-part(skier, new THREE.SphereGeometry(0.24, 16, 12),
-  helmet, 0, 1.48, 0);
+makePart(body, new THREE.SphereGeometry(0.26, 20, 16),
+  helmetMat, 0, 1.68, 0);
 
-part(skier, new THREE.CylinderGeometry(0.07, 0.08, 0.65),
-  dark, -0.32, 0.85, 0);
+// Legs
+for (const side of [-1, 1]) {
+  makePart(body, new THREE.BoxGeometry(0.2, 0.55, 0.22),
+    pantsMat, side * 0.17, 0.42, 0);
 
-part(skier, new THREE.CylinderGeometry(0.07, 0.08, 0.65),
-  dark, 0.32, 0.85, 0);
+  // Skis
+  makePart(body, new THREE.BoxGeometry(0.2, 0.09, 2.3),
+    skiMat, side * 0.22, 0.08, -0.15);
 
-// Skis
-part(skier, new THREE.BoxGeometry(0.25, 0.08, 2.1),
-  dark, -0.22, 0.12, 0);
-
-part(skier, new THREE.BoxGeometry(0.25, 0.08, 2.1),
-  dark, 0.22, 0.12, 0);
-
-// TREES AND ROCKS
-const obstacles = [];
-
-function addTree(x, z) {
-  const tree = new THREE.Group();
-
-  part(tree, new THREE.CylinderGeometry(0.15, 0.2, 1.6),
-    new THREE.MeshStandardMaterial({ color: 0x62452e }),
-    0, 0.8, 0);
-
-  for (let i = 0; i < 3; i++) {
-    part(tree, new THREE.ConeGeometry(1.0 - i * 0.18, 1.8),
-      new THREE.MeshStandardMaterial({ color: 0x174d39 }),
-      0, 1.8 + i * 0.75, 0);
-  }
-
-  tree.position.set(x, mountainHeight(x, z), z);
-  scene.add(tree);
-  obstacles.push({ x, z, radius: 1.0 });
+  // Ski tips
+  const tip = makePart(body,
+    new THREE.SphereGeometry(0.105, 12, 10),
+    skiMat, side * 0.22, 0.08, -1.28);
+  tip.scale.set(1, 0.5, 1.5);
 }
 
-function addRock(x, z) {
-  const rock = new THREE.Mesh(
-    new THREE.DodecahedronGeometry(0.8),
-    new THREE.MeshStandardMaterial({ color: 0x87939b })
-  );
-  rock.position.set(x, mountainHeight(x, z) + 0.5, z);
-  rock.castShadow = true;
-  scene.add(rock);
-  obstacles.push({ x, z, radius: 1.0 });
+// Arms
+for (const side of [-1, 1]) {
+  const arm = makePart(body,
+    new THREE.CylinderGeometry(0.075, 0.09, 0.72, 8),
+    jacketMat, side * 0.4, 1.0, -0.05);
+  arm.rotation.z = side * -0.55;
 }
 
-for (let z = -20; z > -400; z -= 12) {
-  for (const side of [-1, 1]) {
-    const x = side * (13 + Math.random() * 20);
-    if (Math.random() > 0.2) addTree(x, z);
-  }
+// ------------------------------
+// SNOW PARTICLES
+// ------------------------------
 
-  if (Math.random() > 0.65) {
-    addRock((Math.random() - 0.5) * 17, z - 5);
-  }
+const snowCount = 500;
+const snowPositions = new Float32Array(snowCount * 3);
+
+for (let i = 0; i < snowCount; i++) {
+  snowPositions[i * 3] = (Math.random() - 0.5) * 80;
+  snowPositions[i * 3 + 1] = Math.random() * 35 + 2;
+  snowPositions[i * 3 + 2] = -Math.random() * 100;
 }
 
+const snowGeo = new THREE.BufferGeometry();
+snowGeo.setAttribute(
+  "position",
+  new THREE.BufferAttribute(snowPositions, 3)
+);
+
+const snowParticles = new THREE.Points(
+  snowGeo,
+  new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.12,
+    transparent: true,
+    opacity: 0.8
+  })
+);
+scene.add(snowParticles);
+
+// ------------------------------
 // GAME STATE
+// ------------------------------
+
 const keys = {};
-let speed = 0;
-let lateralSpeed = 0;
-let score = 0;
-let tricks = 0;
-let jumpVelocity = 0;
-let airborne = false;
-let flipRotation = 0;
-let flipActive = false;
-let distance = 0;
+
+let started = false;
+let finished = false;
 let crashed = false;
 
-function restart() {
-  speed = 12;
-  lateralSpeed = 0;
-  score = 0;
-  tricks = 0;
-  distance = 0;
-  jumpVelocity = 0;
-  airborne = false;
-  flipRotation = 0;
-  flipActive = false;
+let speed = 0;
+let lateralVelocity = 0;
+let score = 0;
+let trickCount = 0;
+let distance = 0;
+
+let airborne = false;
+let verticalVelocity = 0;
+let flipActive = false;
+let flipRotation = 0;
+let airTime = 0;
+
+let lastGround = 0;
+let lastRamp = -1;
+let lastTrickText = "";
+
+const MAX_SPEED = 34;
+
+function startGame() {
+  started = true;
+  finished = false;
   crashed = false;
-  skier.position.set(0, mountainHeight(0, 0) + 0.4, 0);
+
+  speed = 10;
+  lateralVelocity = 0;
+  score = 0;
+  trickCount = 0;
+  distance = 0;
+
+  airborne = false;
+  verticalVelocity = 0;
+  flipActive = false;
+  flipRotation = 0;
+  airTime = 0;
+  lastRamp = -1;
+
+  skier.position.set(0, groundHeight(0, 0) + 0.2, 0);
   skier.rotation.set(0, 0, 0);
-  document.getElementById("message").textContent = "";
+  body.rotation.set(0, 0, 0);
+
+  gates.forEach(g => g.passed = false);
+
+  document.getElementById("centerMessage").innerHTML = "";
+  document.getElementById("trickText").textContent = "";
+}
+
+function endGame(title, subtitle) {
+  finished = true;
+  crashed = false;
+  document.getElementById("centerMessage").innerHTML =
+    `<h1>${title}</h1><p>${subtitle}</p><p>FINAL SCORE: ${Math.floor(score).toLocaleString()}</p><p>PRESS R TO PLAY AGAIN</p>`;
+}
+
+function crash() {
+  if (crashed || finished) return;
+  crashed = true;
+  speed = 0;
+  document.getElementById("centerMessage").innerHTML =
+    "<h1>WIPEOUT!</h1><p>PRESS R TO TRY AGAIN</p>";
+}
+
+function showTrick(text) {
+  lastTrickText = text;
+  document.getElementById("trickText").textContent = text;
+  setTimeout(() => {
+    if (document.getElementById("trickText").textContent === text) {
+      document.getElementById("trickText").textContent = "";
+    }
+  }, 1500);
 }
 
 addEventListener("keydown", e => {
   keys[e.key.toLowerCase()] = true;
 
-  if (e.code === "Space" && !airborne && !crashed) {
-    jumpVelocity = 10;
-    airborne = true;
+  if (e.code === "Space") {
+    e.preventDefault();
+
+    if (!started || finished || crashed) {
+      startGame();
+    } else if (!airborne) {
+      airborne = true;
+      verticalVelocity = 8.5 + speed * 0.12;
+      airTime = 0;
+    }
   }
 
-  if (e.key.toLowerCase() === "f" && airborne && !flipActive) {
+  if (e.key.toLowerCase() === "f" &&
+      airborne && !flipActive) {
     flipActive = true;
+    flipRotation = 0;
+    showTrick("BACKFLIP!");
   }
 
-  if (e.key.toLowerCase() === "r") restart();
+  if (e.key.toLowerCase() === "r") {
+    startGame();
+  }
 });
 
-addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+addEventListener("keyup", e => {
+  keys[e.key.toLowerCase()] = false;
+});
 
-// MAIN GAME LOOP
+// ------------------------------
+// PHYSICS
+// ------------------------------
+
+function updatePhysics(dt) {
+  if (!started || finished || crashed) return;
+
+  const oldX = skier.position.x;
+  const oldZ = skier.position.z;
+
+  // Steering
+  let steering = 0;
+  if (keys.a || keys.arrowleft) steering -= 1;
+  if (keys.d || keys.arrowright) steering += 1;
+
+  // Carving has stronger effect at higher speeds.
+  const carvePower = 12 + speed * 0.35;
+  lateralVelocity += steering * carvePower * dt;
+  lateralVelocity *= Math.pow(0.90, dt * 60);
+  lateralVelocity = THREE.MathUtils.clamp(
+    lateralVelocity, -12, 12
+  );
+
+  skier.position.x += lateralVelocity * dt;
+
+  // Slope-based acceleration
+  const here = groundHeight(skier.position.x, skier.position.z);
+  const ahead = groundHeight(skier.position.x, skier.position.z - 1);
+  const slopeDrop = here - ahead;
+
+  let acceleration = 9.8 * slopeDrop;
+  acceleration -= speed * 0.025;
+
+  if (keys.w) acceleration += 5;
+  if (keys.s) acceleration -= 10;
+
+  speed += acceleration * dt;
+  speed = THREE.MathUtils.clamp(speed, 3, MAX_SPEED);
+
+  skier.position.z -= speed * dt;
+  distance = Math.max(0, -skier.position.z);
+
+  const ground = groundHeight(skier.position.x, skier.position.z);
+
+  // Automatic ramp launches
+  for (let i = 0; i < ramps.length; i++) {
+    const ramp = ramps[i];
+
+    if (
+      lastRamp !== i &&
+      oldZ > ramp + 2 &&
+      skier.position.z <= ramp + 2 &&
+      skier.position.z > ramp - 12
+    ) {
+      airborne = true;
+      verticalVelocity = 8 + speed * 0.18;
+      airTime = 0;
+      lastRamp = i;
+      showTrick("JUMP!");
+    }
+  }
+
+  // Air physics
+  if (airborne) {
+    airTime += dt;
+    verticalVelocity -= 19 * dt;
+    skier.position.y += verticalVelocity * dt;
+
+    if (flipActive) {
+      flipRotation += dt * 7.5;
+      body.rotation.x = flipRotation;
+
+      if (flipRotation >= Math.PI * 2) {
+        flipActive = false;
+        body.rotation.x = 0;
+        flipRotation = 0;
+        trickCount++;
+        score += 600;
+        showTrick("BACKFLIP +600");
+      }
+    }
+
+    // Landing
+    if (skier.position.y <= ground + 0.2 &&
+        verticalVelocity < 0) {
+      skier.position.y = ground + 0.2;
+
+      if (airTime > 0.35) {
+        if (flipActive) {
+          crash();
+        } else {
+          const landingBonus = Math.floor(airTime * 100);
+          score += landingBonus;
+          showTrick("CLEAN LANDING +" + landingBonus);
+        }
+      }
+
+      airborne = false;
+      verticalVelocity = 0;
+      body.rotation.x = 0;
+      flipActive = false;
+      flipRotation = 0;
+    }
+  } else {
+    skier.position.y = ground + 0.2;
+  }
+
+  // Skier leans into turns
+  const desiredLean = -lateralVelocity * 0.055;
+  skier.rotation.z = THREE.MathUtils.lerp(
+    skier.rotation.z, desiredLean, 1 - Math.pow(0.001, dt)
+  );
+
+  // Point skis downhill, with subtle carving rotation
+  skier.rotation.y = THREE.MathUtils.lerp(
+    skier.rotation.y,
+    -lateralVelocity * 0.035,
+    1 - Math.pow(0.001, dt)
+  );
+
+  // Distance and speed points
+  score += speed * dt * 1.4;
+
+  // Course boundaries
+  if (Math.abs(skier.position.x) > 43) {
+    crash();
+  }
+
+  // Obstacle collisions
+  for (const obstacle of obstacles) {
+    if (Math.abs(skier.position.z - obstacle.z) > 2.5) continue;
+
+    const dx = skier.position.x - obstacle.x;
+    const dz = skier.position.z - obstacle.z;
+
+    if (Math.hypot(dx, dz) < obstacle.radius + 0.45 &&
+        !airborne) {
+      crash();
+      break;
+    }
+  }
+
+  // Ski through the gates for bonus points
+  for (const gate of gates) {
+    if (!gate.passed &&
+        oldZ > gate.z &&
+        skier.position.z <= gate.z) {
+      gate.passed = true;
+
+      if (Math.abs(skier.position.x - gate.x) < 2.5) {
+        score += 250;
+        showTrick("GATE BONUS +250");
+      }
+    }
+  }
+
+  // Finish line
+  if (skier.position.z <= FINISH_Z) {
+    endGame("RUN COMPLETE!", "YOU MADE IT DOWN THE MOUNTAIN");
+  }
+
+  // HUD
+  document.getElementById("speed").textContent =
+    "SPEED " + Math.round(speed * 3.6) + " KM/H";
+
+  document.getElementById("score").textContent =
+    "SCORE " + Math.floor(score).toLocaleString();
+
+  document.getElementById("distance").textContent =
+    "DISTANCE " + Math.floor(distance) + " M";
+
+  document.getElementById("tricks").textContent =
+    "TRICKS " + trickCount;
+
+  document.getElementById("progress").style.width =
+    Math.min(100, distance / COURSE_LENGTH * 100) + "%";
+}
+
+// ------------------------------
+// CAMERA
+// ------------------------------
+
+function updateCamera(dt) {
+  const cameraDistance = 13 + speed * 0.06;
+
+  const desired = new THREE.Vector3(
+    skier.position.x * 0.65,
+    skier.position.y + 5.8,
+    skier.position.z + cameraDistance
+  );
+
+  camera.position.lerp(
+    desired, 1 - Math.pow(0.001, dt)
+  );
+
+  camera.lookAt(
+    skier.position.x,
+    skier.position.y + 1.0,
+    skier.position.z - 11
+  );
+
+  // Slight camera roll when carving
+  camera.rotation.z = THREE.MathUtils.lerp(
+    camera.rotation.z,
+    -lateralVelocity * 0.006,
+    0.06
+  );
+}
+
+// ------------------------------
+// SNOW PARTICLE MOVEMENT
+// ------------------------------
+
+function updateSnow(dt) {
+  const p = snowGeo.attributes.position;
+
+  for (let i = 0; i < snowCount; i++) {
+    p.array[i * 3 + 1] -= 3 * dt;
+    p.array[i * 3 + 2] += speed * dt * 0.6;
+
+    if (p.array[i * 3 + 1] < 0) {
+      p.array[i * 3 + 1] = 30;
+    }
+
+    if (p.array[i * 3 + 2] > 15) {
+      p.array[i * 3 + 2] = -100;
+    }
+  }
+
+  p.needsUpdate = true;
+}
+
+// ------------------------------
+// MAIN LOOP
+// ------------------------------
+
 const clock = new THREE.Clock();
 
 function animate() {
   requestAnimationFrame(animate);
 
-  const dt = Math.min(clock.getDelta(), 0.04);
+  const dt = Math.min(clock.getDelta(), 0.035);
 
-  if (!crashed) {
-    // Steering and momentum
-    let steering = 0;
-    if (keys.a || keys.arrowleft) steering = -1;
-    if (keys.d || keys.arrowright) steering = 1;
-
-    lateralSpeed += steering * 16 * dt;
-    lateralSpeed *= Math.pow(0.94, dt * 60);
-    lateralSpeed = THREE.MathUtils.clamp(lateralSpeed, -10, 10);
-
-    speed = Math.min(speed + dt * 0.7, 32);
-
-    skier.position.x += lateralSpeed * dt;
-    skier.position.z -= speed * dt;
-    distance += speed * dt;
-
-    // Keep the player on the mountain
-    const ground = mountainHeight(skier.position.x, skier.position.z);
-
-    if (airborne) {
-      jumpVelocity -= 24 * dt;
-      skier.position.y += jumpVelocity * dt;
-
-      if (flipActive) {
-        flipRotation += dt * 9;
-        skier.rotation.x = flipRotation;
-
-        if (flipRotation >= Math.PI * 2) {
-          flipActive = false;
-          flipRotation = 0;
-          skier.rotation.x = 0;
-          tricks++;
-          score += 500;
-        }
-      }
-
-      if (skier.position.y <= ground + 0.4 && jumpVelocity < 0) {
-        skier.position.y = ground + 0.4;
-        airborne = false;
-        jumpVelocity = 0;
-        skier.rotation.x = 0;
-      }
-    } else {
-      skier.position.y = ground + 0.4;
-    }
-
-    // Lean into turns
-    skier.rotation.z = THREE.MathUtils.lerp(
-      skier.rotation.z, -lateralSpeed * 0.045, 0.12
-    );
-
-    // Obstacle collisions
-    for (const obstacle of obstacles) {
-      const dx = skier.position.x - obstacle.x;
-      const dz = skier.position.z - obstacle.z;
-
-      if (Math.hypot(dx, dz) < obstacle.radius) {
-        crashed = true;
-        document.getElementById("message").textContent =
-          "CRASH! PRESS R TO RESTART";
-        break;
-      }
-    }
-
-    score += Math.floor(speed * dt);
-
-    if (Math.abs(skier.position.x) > 42) {
-      crashed = true;
-      document.getElementById("message").textContent =
-        "OFF THE COURSE! PRESS R";
-    }
-
-    document.getElementById("speed").textContent =
-      "Speed: " + Math.round(speed * 3.6) + " km/h";
-
-    document.getElementById("score").textContent =
-      "Score: " + score;
-
-    document.getElementById("tricks").textContent =
-      "Tricks: " + tricks;
-  }
-
-  // FOLLOW CAMERA
-  const targetCamera = new THREE.Vector3(
-    skier.position.x * 0.65,
-    skier.position.y + 5,
-    skier.position.z + 11
-  );
-
-  camera.position.lerp(targetCamera, 0.09);
-  camera.lookAt(
-    skier.position.x,
-    skier.position.y + 1,
-    skier.position.z - 9
-  );
+  updatePhysics(dt);
+  updateCamera(dt);
+  updateSnow(dt);
 
   renderer.render(scene, camera);
 }
 
-restart();
+skier.position.set(0, groundHeight(0, 0) + 0.2, 0);
+
+camera.position.set(0, 12, 15);
+camera.lookAt(0, 5, -10);
+
 animate();
 
 addEventListener("resize", () => {
