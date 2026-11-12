@@ -1,16 +1,162 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Velocity Arena</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="utf-8">
+<title>Velocity Arena</title>
+
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+}
+
+#info {
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    color: white;
+    background: rgba(0,0,0,.6);
+    padding: 10px;
+    border-radius: 8px;
+}
+</style>
 </head>
+
 <body>
 
-<h1>Velocity Arena</h1>
+<div id="info">
+WASD = Move<br>
+Space = Jump
+</div>
 
-<canvas id="gameCanvas"></canvas>
+<script type="module">
 
-<script src="game.js"></script>
+import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87ceeb);
+
+const camera = new THREE.PerspectiveCamera(
+75,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+);
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(10,20,10);
+scene.add(light);
+
+scene.add(new THREE.AmbientLight(0xffffff,0.6));
+
+const floor = new THREE.Mesh(
+new THREE.BoxGeometry(50,1,50),
+new THREE.MeshStandardMaterial({color:0x55aa55})
+);
+
+floor.position.y=-0.5;
+scene.add(floor);
+
+function platform(x,y,z,w,h,d,color=0x6666ff){
+
+const p = new THREE.Mesh(
+new THREE.BoxGeometry(w,h,d),
+new THREE.MeshStandardMaterial({color})
+);
+
+p.position.set(x,y,z);
+
+scene.add(p);
+
+return p;
+}
+
+platform(0,2,-8,4,1,4);
+platform(0,4,-16,4,1,4);
+platform(4,6,-24,4,1,4);
+platform(-4,8,-32,4,1,4);
+
+const player = new THREE.Mesh(
+new THREE.BoxGeometry(1,2,1),
+new THREE.MeshStandardMaterial({color:0xff3333})
+);
+
+player.position.y=1;
+scene.add(player);
+
+const keys={};
+
+document.addEventListener("keydown",e=>{
+keys[e.key.toLowerCase()]=true;
+});
+
+document.addEventListener("keyup",e=>{
+keys[e.key.toLowerCase()]=false;
+});
+
+let velocityY=0;
+let grounded=true;
+
+function animate(){
+
+requestAnimationFrame(animate);
+
+let speed=0.12;
+
+if(keys["w"]) player.position.z-=speed;
+if(keys["s"]) player.position.z+=speed;
+if(keys["a"]) player.position.x-=speed;
+if(keys["d"]) player.position.x+=speed;
+
+if(keys[" "] && grounded){
+
+velocityY=0.22;
+grounded=false;
+
+}
+
+velocityY-=0.01;
+
+player.position.y+=velocityY;
+
+if(player.position.y<=1){
+
+player.position.y=1;
+velocityY=0;
+grounded=true;
+
+}
+
+camera.position.x=player.position.x;
+camera.position.y=player.position.y+6;
+camera.position.z=player.position.z+10;
+
+camera.lookAt(player.position);
+
+renderer.render(scene,camera);
+
+}
+
+animate();
+
+window.addEventListener("resize",()=>{
+
+camera.aspect=window.innerWidth/window.innerHeight;
+camera.updateProjectionMatrix();
+
+renderer.setSize(
+window.innerWidth,
+window.innerHeight
+);
+
+});
+
+</script>
 
 </body>
 </html>
