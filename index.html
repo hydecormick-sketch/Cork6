@@ -3,330 +3,778 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Alpine Rush 3D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ALPINE — Ski Resort</title>
+
 <style>
-*{box-sizing:border-box}
-body{margin:0;overflow:hidden;background:#9bc9e8;font-family:Arial,sans-serif}
-#hud{position:absolute;top:16px;left:20px;color:white;text-shadow:0 2px 8px #17334d;pointer-events:none}
-#logo{font-size:25px;font-weight:900;letter-spacing:3px;margin-bottom:10px}
-.stat{font-size:15px;margin:6px 0;font-weight:bold}
-#mapSelect{pointer-events:auto;font-weight:bold;border:0;border-radius:5px;padding:5px}
-#trickText{color:#ffe17c;font-size:20px;margin-top:10px;font-weight:bold;max-width:340px}
-#controls{position:absolute;bottom:14px;left:20px;color:white;text-shadow:0 2px 5px #17334d;font-size:12px;line-height:1.7}
-#centerMessage{position:absolute;inset:0;display:flex;justify-content:center;align-items:center;flex-direction:column;color:white;text-shadow:0 3px 12px #18344d;pointer-events:none;text-align:center}
-#centerMessage h1{font-size:clamp(35px,7vw,76px);margin:0;letter-spacing:5px}
-#centerMessage p{font-size:17px;font-weight:bold}
-#progressOuter{position:absolute;top:20px;right:22px;width:150px;height:8px;background:#ffffff66;border-radius:10px;overflow:hidden}
-#progress{height:100%;width:0%;background:white}
-#airLabel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:30px;font-weight:900;color:white;text-shadow:0 3px 10px #17334d;pointer-events:none}
+:root {
+  --accent: #72e2f2;
+  --panel: rgba(12,25,40,.88);
+  --muted: #a9bdcc;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #a8cde3;
+  color: white;
+  font-family: Inter, Arial, sans-serif;
+}
+
+canvas { display: block; }
+
+button, select { font: inherit; }
+
+button {
+  border: 0;
+  cursor: pointer;
+  color: white;
+  font-weight: 800;
+  transition: .18s ease;
+}
+
+button:hover { transform: translateY(-2px); filter: brightness(1.13); }
+button:active { transform: scale(.98); }
+
+#hub {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+  background: linear-gradient(90deg,rgba(5,17,30,.86),rgba(5,17,30,.35),rgba(5,17,30,.76));
+}
+
+#hubPanel {
+  width: min(1080px, 100%);
+  max-height: 94vh;
+  overflow: auto;
+  background: rgba(9,22,36,.88);
+  border: 1px solid #ffffff24;
+  border-radius: 22px;
+  box-shadow: 0 25px 90px #06101d88;
+  backdrop-filter: blur(18px);
+  padding: 26px;
+}
+
+#topLine {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+#brand {
+  font-size: 30px;
+  font-weight: 1000;
+  letter-spacing: 7px;
+}
+
+#brand span { color: var(--accent); }
+
+#edition {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 3px;
+  font-weight: 800;
+}
+
+#hubGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
+}
+
+.panel {
+  background: #ffffff09;
+  border: 1px solid #ffffff17;
+  border-radius: 16px;
+  padding: 19px;
+}
+
+.sectionTitle {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 15px;
+}
+
+#previewBox {
+  height: 270px;
+  border-radius: 13px;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(#8bb8d6,#dcecf5);
+}
+
+#previewCaption {
+  position: absolute;
+  left: 15px;
+  bottom: 13px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: 900;
+  text-shadow: 0 2px 8px #152d40;
+  pointer-events: none;
+}
+
+.customGroup { margin-top: 17px; }
+
+.customLabel {
+  color: #c2d1dc;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  margin-bottom: 9px;
+}
+
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.swatch {
+  width: 31px;
+  height: 31px;
+  border-radius: 50%;
+  border: 2px solid #ffffff55;
+  box-shadow: inset 0 0 0 2px #00000018;
+  padding: 0;
+}
+
+.swatch.selected {
+  outline: 2px solid white;
+  outline-offset: 3px;
+}
+
+#outfitSelect, #mapSelect {
+  width: 100%;
+  padding: 12px;
+  color: white;
+  background: #1b344a;
+  border: 1px solid #ffffff26;
+  border-radius: 9px;
+  outline: none;
+}
+
+#mapInfo {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  min-height: 38px;
+}
+
+#startButton {
+  width: 100%;
+  padding: 17px;
+  border-radius: 11px;
+  margin-top: 20px;
+  color: #092131;
+  background: linear-gradient(110deg,#8cf1f2,#55c7ed);
+  font-size: 15px;
+  letter-spacing: 2px;
+  box-shadow: 0 8px 25px #4acbe944;
+}
+
+#hubFooter {
+  margin-top: 16px;
+  text-align: center;
+  color: #8299aa;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+#hud {
+  position: fixed;
+  z-index: 3;
+  top: 17px;
+  left: 19px;
+  pointer-events: none;
+  text-shadow: 0 2px 8px #102c45;
+}
+
+#hudLogo {
+  font-size: 20px;
+  font-weight: 1000;
+  letter-spacing: 4px;
+  margin-bottom: 12px;
+}
+
+.hudStat {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  margin: 7px 0;
+}
+
+#trickText {
+  color: #a4f4ff;
+  font-size: 17px;
+  font-weight: 900;
+  margin-top: 12px;
+}
+
+#progressOuter {
+  position: fixed;
+  top: 20px;
+  right: 22px;
+  z-index: 3;
+  width: 170px;
+  height: 6px;
+  background: #ffffff55;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+#progress {
+  width: 0;
+  height: 100%;
+  background: #9df5ff;
+}
+
+#controls {
+  position: fixed;
+  bottom: 15px;
+  left: 18px;
+  z-index: 3;
+  color: #e4f3fa;
+  font-size: 11px;
+  line-height: 1.8;
+  text-shadow: 0 2px 7px #102c45;
+  pointer-events: none;
+}
+
+#airLabel {
+  position: fixed;
+  z-index: 3;
+  top: 48%;
+  left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 25px;
+  font-weight: 1000;
+  letter-spacing: 2px;
+  text-shadow: 0 3px 12px #102c45;
+  pointer-events: none;
+}
+
+#runButtons {
+  position: fixed;
+  z-index: 4;
+  top: 15px;
+  right: 210px;
+  display: none;
+}
+
+.smallButton {
+  padding: 9px 13px;
+  border-radius: 8px;
+  background: #102c45cc;
+  border: 1px solid #ffffff33;
+  font-size: 11px;
+}
+
+#centerMessage {
+  position: fixed;
+  z-index: 5;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  background: #07152266;
+  text-align: center;
+  text-shadow: 0 3px 12px #102c45;
+}
+
+#centerMessage h1 {
+  font-size: clamp(38px,7vw,76px);
+  letter-spacing: 5px;
+  margin: 0;
+}
+
+#centerMessage p {
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+@media(max-width:760px) {
+  #hub { padding: 9px; }
+  #hubPanel { padding: 15px; }
+  #hubGrid { grid-template-columns: 1fr; }
+  #previewBox { height: 190px; }
+  #brand { font-size: 23px; }
+  #edition { font-size: 9px; }
+  #controls { font-size: 9px; }
+  #progressOuter { width: 100px; }
+  #runButtons { right: 135px; }
+}
 </style>
 </head>
+
 <body>
+
+<div id="hub">
+  <div id="hubPanel">
+    <div id="topLine">
+      <div>
+        <div id="brand">ALPINE<span>.</span></div>
+        <div id="edition">YOUR MOUNTAIN. YOUR STYLE. YOUR RUN.</div>
+      </div>
+      <div id="edition">SKI RESORT / 01</div>
+    </div>
+
+    <div id="hubGrid">
+      <div class="panel">
+        <div class="sectionTitle">01 / YOUR SKIER</div>
+        <div id="previewBox">
+          <div id="previewCaption">CHARACTER PREVIEW</div>
+        </div>
+
+        <div class="customGroup">
+          <div class="customLabel">OUTFIT PRESET</div>
+          <select id="outfitSelect">
+            <option value="classic">Classic Racer</option>
+            <option value="arctic">Arctic Explorer</option>
+            <option value="sunset">Sunset Freerider</option>
+            <option value="stealth">Stealth Mode</option>
+            <option value="neon">Neon Park Rider</option>
+          </select>
+        </div>
+
+        <div class="customGroup">
+          <div class="customLabel">JACKET COLOR</div>
+          <div class="swatches" id="jacketSwatches"></div>
+        </div>
+
+        <div class="customGroup">
+          <div class="customLabel">PANTS COLOR</div>
+          <div class="swatches" id="pantsSwatches"></div>
+        </div>
+
+        <div class="customGroup">
+          <div class="customLabel">HELMET COLOR</div>
+          <div class="swatches" id="helmetSwatches"></div>
+        </div>
+
+        <div class="customGroup">
+          <div class="customLabel">SKI COLOR</div>
+          <div class="swatches" id="skiSwatches"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="sectionTitle">02 / CHOOSE YOUR MOUNTAIN</div>
+        <select id="mapSelect">
+          <option value="alpine">Alpine Peaks</option>
+          <option value="forest">Frozen Forest</option>
+          <option value="volcano">Volcano Ridge</option>
+          <option value="extreme">Extreme Park</option>
+        </select>
+
+        <div id="mapInfo"></div>
+
+        <div style="height:18px"></div>
+        <div class="sectionTitle">03 / READY TO RIDE?</div>
+        <div style="color:#b7c9d6;font-size:13px;line-height:1.8">
+          Carve down the mountain, hit the jumps, grind the rails, and build your score.
+          <br><br>
+          Land tricks cleanly to build your combo multiplier. Watch your speed and avoid the trees!
+        </div>
+
+        <button id="startButton">START YOUR RUN →</button>
+
+        <div style="margin-top:20px;border-top:1px solid #ffffff20;padding-top:15px">
+          <div class="sectionTitle">CONTROLS</div>
+          <div style="color:#b7c9d6;font-size:12px;line-height:2">
+            A / D — Carve left and right<br>
+            W / S — Accelerate and brake<br>
+            SPACE — Jump / rail pop-out<br>
+            A / D in air — Spin<br>
+            W / S in air — Flip<br>
+            1–4 — Grab tricks<br>
+            R — Restart run
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hubFooter">ALPINE RESORT • FIND YOUR LINE</div>
+  </div>
+</div>
+
 <div id="hud">
- <div id="logo">ALPINE RUSH</div>
- <div class="stat" id="speed">SPEED 0 KM/H</div>
- <div class="stat" id="score">SCORE 0</div>
- <div class="stat" id="distance">DISTANCE 0 M</div>
- <div class="stat" id="tricks">TRICKS 0</div>
- <div class="stat" id="combo">COMBO x1</div>
- <div class="stat">MAP:
-  <select id="mapSelect">
-   <option value="alpine">Alpine Peaks</option>
-   <option value="forest">Frozen Forest</option>
-   <option value="volcano">Volcano Ridge</option>
-   <option value="extreme">Extreme Park</option>
-  </select>
- </div>
- <div id="trickText"></div>
+  <div id="hudLogo">ALPINE<span style="color:#9df5ff">.</span></div>
+  <div class="hudStat" id="speed">SPEED 0 KM/H</div>
+  <div class="hudStat" id="score">SCORE 0</div>
+  <div class="hudStat" id="distance">DISTANCE 0 M</div>
+  <div class="hudStat" id="tricks">TRICKS 0</div>
+  <div class="hudStat" id="combo">COMBO x1</div>
+  <div id="trickText"></div>
 </div>
 
 <div id="progressOuter"><div id="progress"></div></div>
 <div id="airLabel"></div>
+
 <div id="controls">
- A / D — Steer; tap in air for 360 spins<br>
- W / S — Accelerate / brake; tap in air for flips<br>
- 1 — Safety grab &nbsp; 2 — Mute grab<br>
- 3 — Stalefish &nbsp; 4 — Tail grab<br>
- SPACE — Jump / ollie &nbsp; R — Restart
-</div>
-<div id="centerMessage">
- <h1>ALPINE RUSH</h1>
- <p>PRESS SPACE TO START</p>
+  A / D — CARVE<br>
+  W / S — SPEED<br>
+  SPACE — JUMP<br>
+  1–4 — GRABS<br>
+  R — RESTART
 </div>
 
+<div id="runButtons">
+  <button class="smallButton" id="hubButton">BACK TO HUB</button>
+</div>
+
+<div id="centerMessage"></div>
+
 <script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
+}
 </script>
 
 <script type="module">
 import * as THREE from "three";
 
-/* ---------------- MAPS ---------------- */
+/* ---------------- SETTINGS ---------------- */
 
-const MAPS={
- alpine:{
-  sky:0x9bc9e8,snow:0xf0f7ff,slope:.027,wave:1.1,
-  trees:[0x164b3b,0x205a43,0x286448],
-  ramps:[-240,-570,-900,-1240,-1600],
-  rails:[-390,-760,-1120,-1480,-1770]
- },
- forest:{
-  sky:0x9ab9d0,snow:0xe1eff8,slope:.035,wave:1.8,
-  trees:[0x123b38,0x1b5046,0x27604f],
-  ramps:[-300,-720,-1160,-1580],
-  rails:[-500,-920,-1350,-1740]
- },
- volcano:{
-  sky:0xc3a6a0,snow:0xe5e0dc,slope:.023,wave:2.5,
-  trees:[0x45413d,0x665348,0x514c48],
-  ramps:[-220,-610,-1000,-1420,-1770],
-  rails:[-420,-820,-1230,-1630]
- },
- extreme:{
-  sky:0x829fca,snow:0xe5f0ff,slope:.032,wave:1.5,
-  trees:[0x173e37,0x235647,0x315c49],
-  ramps:[-180,-390,-650,-920,-1210,-1510,-1790],
-  rails:[-290,-550,-830,-1100,-1390,-1680,-1900]
- }
+const MAPS = {
+  alpine: {
+    sky: 0x9bc9e8, snow: 0xf0f7ff, slope: .027, wave: 1.1,
+    trees: [0x164b3b,0x205a43,0x286448],
+    ramps: [-240,-570,-900,-1240,-1600],
+    rails: [-390,-760,-1120,-1480],
+    description: "A classic mountain with long runs, flowing turns, and a mix of jumps and rails."
+  },
+  forest: {
+    sky: 0x9ab9d0, snow: 0xe1eff8, slope: .035, wave: 1.8,
+    trees: [0x123b38,0x1b5046,0x27604f],
+    ramps: [-300,-720,-1160,-1580],
+    rails: [-500,-920,-1350,-1740],
+    description: "A winding run through a dense snowy forest. Keep your eyes open for trees."
+  },
+  volcano: {
+    sky: 0xc3a6a0, snow: 0xe5e0dc, slope: .023, wave: 2.5,
+    trees: [0x45413d,0x665348,0x514c48],
+    ramps: [-220,-610,-1000,-1420,-1770],
+    rails: [-420,-820,-1230,-1630],
+    description: "A dramatic volcanic mountain with dark rock formations and a warm sky."
+  },
+  extreme: {
+    sky: 0x829fca, snow: 0xe5f0ff, slope: .032, wave: 1.5,
+    trees: [0x173e37,0x235647,0x315c49],
+    ramps: [-180,-390,-650,-920,-1210,-1510],
+    rails: [-290,-550,-830,-1100,-1390,-1680,-1900],
+    description: "A technical park packed with jumps and rails. Built for big combos."
+  }
 };
 
-const params=new URLSearchParams(location.search);
-let currentMap=MAPS[params.get("map")]?params.get("map"):"alpine";
-let MAP=MAPS[currentMap];
+const params = new URLSearchParams(location.search);
+let currentMap = MAPS[params.get("map")] ? params.get("map") : "alpine";
+let MAP = MAPS[currentMap];
 
-const scene=new THREE.Scene();
-scene.background=new THREE.Color(MAP.sky);
-scene.fog=new THREE.Fog(MAP.sky,100,440);
+const COURSE_LENGTH = 2000;
+const FINISH_Z = -COURSE_LENGTH;
 
-const camera=new THREE.PerspectiveCamera(67,innerWidth/innerHeight,.1,1200);
-const renderer=new THREE.WebGLRenderer({antialias:true});
+const palettes = {
+  jacket: ["#f04d36","#278bd5","#36a878","#e0a52d","#a65bd1","#eeeeee","#202b3b","#ed70a8"],
+  pants: ["#172d48","#20252b","#354c64","#e8e8e8","#76543d","#263b34","#47335c"],
+  helmet: ["#ffcf45","#f04d36","#e9f2f8","#202b3b","#56d6e8","#9e62d0","#45a477"],
+  ski: ["#192a3b","#f04d36","#47c9e2","#e9e9e9","#d5a52c","#9d60d3","#55b77c"]
+};
+
+const outfits = {
+  classic: ["#f04d36","#172d48","#ffcf45","#192a3b"],
+  arctic: ["#42a9dc","#eaf4fa","#f4f7fb","#257ca6"],
+  sunset: ["#ed7845","#303047","#e8b94d","#e45c45"],
+  stealth: ["#27313d","#171e29","#414e60","#151c25"],
+  neon: ["#52d7c3","#33324d","#e4c8ff","#f45fd0"]
+};
+
+let appearance = {
+  jacket: "#f04d36",
+  pants: "#172d48",
+  helmet: "#ffcf45",
+  ski: "#192a3b"
+};
+
+try {
+  const saved = JSON.parse(localStorage.getItem("alpineAppearance") || "null");
+  if (saved) appearance = {...appearance,...saved};
+} catch {}
+
+function saveAppearance() {
+  try { localStorage.setItem("alpineAppearance",JSON.stringify(appearance)); } catch {}
+}
+
+/* ---------------- THREE SETUP ---------------- */
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(MAP.sky);
+scene.fog = new THREE.Fog(MAP.sky,100,470);
+
+const camera = new THREE.PerspectiveCamera(66,innerWidth/innerHeight,.1,1300);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.15;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
-scene.add(new THREE.HemisphereLight(0xe6f5ff,0x647b91,2));
-const sun=new THREE.DirectionalLight(0xffffff,2.4);
+scene.add(new THREE.HemisphereLight(0xe8f6ff,0x647b91,2));
+
+const sun = new THREE.DirectionalLight(0xffffff,2.5);
 sun.position.set(-80,120,70);
-sun.castShadow=true;
+sun.castShadow = true;
 sun.shadow.mapSize.set(2048,2048);
-sun.shadow.camera.left=-100;
-sun.shadow.camera.right=100;
-sun.shadow.camera.top=100;
-sun.shadow.camera.bottom=-100;
+sun.shadow.camera.left = -100;
+sun.shadow.camera.right = 100;
+sun.shadow.camera.top = 100;
+sun.shadow.camera.bottom = -100;
 scene.add(sun);
 
-const COURSE_LENGTH=2000;
-const FINISH_Z=-COURSE_LENGTH;
-
-function groundHeight(x,z){
- let h=22-z*MAP.slope+
- Math.sin(z*.025)*MAP.wave+
- Math.sin(x*.12+z*.018)*.7+
- Math.sin(x*.045)*.5;
- return h;
+function groundHeight(x,z) {
+  return 22-z*MAP.slope +
+    Math.sin(z*.025)*MAP.wave +
+    Math.sin(x*.12+z*.018)*.7 +
+    Math.sin(x*.045)*.5;
 }
 
 /* ---------------- TERRAIN ---------------- */
 
-const positions=[],indices=[];
-const NX=90,NZ=1200;
+const positions = [];
+const indices = [];
+const NX = 90, NZ = 1200;
 
-for(let iz=0;iz<=NZ;iz++){
- const z=90-iz*(COURSE_LENGTH+180)/NZ;
- for(let ix=0;ix<=NX;ix++){
-  const x=-55+ix*110/NX;
-  positions.push(x,groundHeight(x,z),z);
- }
+for (let iz=0;iz<=NZ;iz++) {
+  const z = 90-iz*(COURSE_LENGTH+180)/NZ;
+  for (let ix=0;ix<=NX;ix++) {
+    const x = -55+ix*110/NX;
+    positions.push(x,groundHeight(x,z),z);
+  }
 }
-for(let iz=0;iz<NZ;iz++){
- for(let ix=0;ix<NX;ix++){
-  const a=iz*(NX+1)+ix,b=a+1,c=a+NX+1,d=c+1;
-  indices.push(a,c,b,b,c,d);
- }
+
+for (let iz=0;iz<NZ;iz++) {
+  for (let ix=0;ix<NX;ix++) {
+    const a=iz*(NX+1)+ix,b=a+1,c=a+NX+1,d=c+1;
+    indices.push(a,c,b,b,c,d);
+  }
 }
-const terrainGeo=new THREE.BufferGeometry();
+
+const terrainGeo = new THREE.BufferGeometry();
 terrainGeo.setAttribute("position",new THREE.Float32BufferAttribute(positions,3));
 terrainGeo.setIndex(indices);
 terrainGeo.computeVertexNormals();
 
-const terrain=new THREE.Mesh(
- terrainGeo,
- new THREE.MeshStandardMaterial({color:MAP.snow,roughness:.95,side:THREE.DoubleSide})
+const terrain = new THREE.Mesh(
+  terrainGeo,
+  new THREE.MeshStandardMaterial({
+    color:MAP.snow,
+    roughness:.96,
+    side:THREE.DoubleSide
+  })
 );
-terrain.receiveShadow=true;
+terrain.receiveShadow = true;
 scene.add(terrain);
 
-for(const side of [-1,1]){
- const wall=new THREE.Mesh(
-  new THREE.BoxGeometry(20,70,COURSE_LENGTH+200),
-  new THREE.MeshStandardMaterial({color:0xc9deeb})
- );
- wall.position.set(side*65,16,-COURSE_LENGTH/2);
- scene.add(wall);
-}
+/* Mountain backdrop */
+const peakMaterial = new THREE.MeshStandardMaterial({
+  color:0xe0edf5,
+  roughness:1
+});
 
-const peakMaterial=new THREE.MeshStandardMaterial({color:0xdcebf5});
-for(let i=0;i<35;i++){
- const peak=new THREE.Mesh(
-  new THREE.ConeGeometry(18+Math.random()*20,45+Math.random()*45,5),
-  peakMaterial
- );
- peak.position.set((Math.random()-.5)*400,25+Math.random()*25,-100-Math.random()*2200);
- scene.add(peak);
+for (let i=0;i<42;i++) {
+  const peak = new THREE.Mesh(
+    new THREE.ConeGeometry(18+Math.random()*22,45+Math.random()*55,6),
+    peakMaterial
+  );
+  peak.position.set(
+    (Math.random()-.5)*420,
+    25+Math.random()*35,
+    -100-Math.random()*2300
+  );
+  peak.rotation.y = Math.random()*Math.PI;
+  scene.add(peak);
 }
 
 /* ---------------- TREES ---------------- */
 
-const obstacles=[];
-const trunkMat=new THREE.MeshStandardMaterial({color:0x65432d});
+const obstacles = [];
+const trunkMat = new THREE.MeshStandardMaterial({color:0x65432d});
 
-function addTree(x,z){
- const group=new THREE.Group();
- const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.17,.25,1.8,7),trunkMat);
- trunk.position.y=.9;
- trunk.castShadow=true;
- group.add(trunk);
+function addTree(x,z) {
+  const group = new THREE.Group();
 
- for(let i=0;i<3;i++){
-  const cone=new THREE.Mesh(
-   new THREE.ConeGeometry(1.25-i*.23,2,7),
-   new THREE.MeshStandardMaterial({color:MAP.trees[Math.floor(Math.random()*MAP.trees.length)]})
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(.15,.25,1.8,8),
+    trunkMat
   );
-  cone.position.y=1.9+i*.85;
-  cone.castShadow=true;
-  group.add(cone);
- }
- group.position.set(x,groundHeight(x,z),z);
- scene.add(group);
- obstacles.push({x,z,radius:1.15});
+  trunk.position.y=.9;
+  trunk.castShadow=true;
+  group.add(trunk);
+
+  for (let i=0;i<3;i++) {
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(1.35-i*.23,2.1,8),
+      new THREE.MeshStandardMaterial({
+        color:MAP.trees[Math.floor(Math.random()*MAP.trees.length)],
+        roughness:.9
+      })
+    );
+    cone.position.y=1.8+i*.82;
+    cone.castShadow=true;
+    group.add(cone);
+  }
+
+  group.position.set(x,groundHeight(x,z),z);
+  scene.add(group);
+  obstacles.push({x,z,radius:1.2});
 }
 
-for(let z=-35;z>FINISH_Z+30;z-=18){
- for(const side of [-1,1]){
-  if(Math.random()>.12)addTree(side*(17+Math.random()*23),z);
- }
+for (let z=-35;z>FINISH_Z+30;z-=17) {
+  for (const side of [-1,1]) {
+    if (Math.random()>.13) addTree(side*(18+Math.random()*23),z);
+  }
 }
 
 /* ---------------- RAMPS ---------------- */
 
-const ramps=[];
-const rampMat=new THREE.MeshStandardMaterial({
- color:0x3988b4,roughness:.55,metalness:.15
+const ramps = [];
+const rampMat = new THREE.MeshStandardMaterial({
+  color:0x3988b4,roughness:.55,metalness:.15
 });
-const lipMat=new THREE.MeshStandardMaterial({color:0xffffff});
 
-for(const z of MAP.ramps){
- const group=new THREE.Group();
- const ramp=new THREE.Mesh(new THREE.BoxGeometry(10,1,17),rampMat);
- ramp.rotation.x=-.20;
- ramp.position.y=.45;
- ramp.castShadow=true;
- ramp.receiveShadow=true;
- group.add(ramp);
+for (const z of MAP.ramps) {
+  const group = new THREE.Group();
 
- const lip=new THREE.Mesh(new THREE.BoxGeometry(10,.35,1.3),lipMat);
- lip.position.set(0,1.8,-7);
- group.add(lip);
+  const ramp = new THREE.Mesh(
+    new THREE.BoxGeometry(10,1,17),
+    rampMat
+  );
+  ramp.rotation.x=-.20;
+  ramp.position.y=.45;
+  ramp.castShadow=true;
+  group.add(ramp);
 
- group.position.set(0,groundHeight(0,z)+.1,z);
- scene.add(group);
- ramps.push({z,x:0,width:5.5,used:false});
+  const lip = new THREE.Mesh(
+    new THREE.BoxGeometry(10,.35,1.3),
+    new THREE.MeshStandardMaterial({color:0xffffff})
+  );
+  lip.position.set(0,1.8,-7);
+  group.add(lip);
+
+  group.position.set(0,groundHeight(0,z)+.1,z);
+  scene.add(group);
+  ramps.push({z,x:0,width:5.5,used:false});
 }
 
-/* ---------------- REAL VISIBLE RAILS ---------------- */
+/* ---------------- RAILS ---------------- */
 
-const rails=[];
-const railMat=new THREE.MeshStandardMaterial({
- color:0xdceaf3,metalness:.9,roughness:.2
+const rails = [];
+const railMat = new THREE.MeshStandardMaterial({
+  color:0xdceaf3,metalness:.85,roughness:.22
 });
-const supportMat=new THREE.MeshStandardMaterial({
- color:0x394b5a,metalness:.6,roughness:.35
-});
-const glowMat=new THREE.MeshStandardMaterial({
- color:0x35d9ff,emissive:0x087b9a,emissiveIntensity:1.1
+const supportMat = new THREE.MeshStandardMaterial({
+  color:0x394b5a,metalness:.5,roughness:.4
 });
 
-for(const z of MAP.rails){
- const x=(Math.random()-.5)*10;
- const length=27;
- const group=new THREE.Group();
+for (const z of MAP.rails) {
+  const x=(Math.random()-.5)*10;
+  const length=27;
+  const group=new THREE.Group();
 
- const beam=new THREE.Mesh(
-  new THREE.CylinderGeometry(.19,.19,length,12),
-  railMat
- );
- beam.rotation.x=Math.PI/2;
- beam.castShadow=true;
- group.add(beam);
-
- for(const offset of [-9,-3,3,9]){
-  const post=new THREE.Mesh(
-   new THREE.CylinderGeometry(.14,.18,1.15,8),
-   supportMat
+  const beam=new THREE.Mesh(
+    new THREE.CylinderGeometry(.2,.2,length,12),
+    railMat
   );
-  post.position.set(0,-.65,offset);
-  post.castShadow=true;
-  group.add(post);
+  beam.rotation.x=Math.PI/2;
+  beam.castShadow=true;
+  group.add(beam);
 
-  const foot=new THREE.Mesh(
-   new THREE.BoxGeometry(1.1,.12,.8),
-   supportMat
-  );
-  foot.position.set(0,-1.2,offset);
-  group.add(foot);
- }
+  for (const offset of [-9,-3,3,9]) {
+    const post=new THREE.Mesh(
+      new THREE.CylinderGeometry(.14,.18,1.15,8),
+      supportMat
+    );
+    post.position.set(0,-.65,offset);
+    group.add(post);
 
- for(const end of [-1,1]){
-  const marker=new THREE.Mesh(
-   new THREE.BoxGeometry(1.1,.25,.7),
-   glowMat
-  );
-  marker.position.set(0,.25,end*(length/2));
-  group.add(marker);
- }
+    const foot=new THREE.Mesh(
+      new THREE.BoxGeometry(1.1,.12,.8),
+      supportMat
+    );
+    foot.position.set(0,-1.2,offset);
+    group.add(foot);
+  }
 
- const y=groundHeight(x,z)+1.35;
- group.position.set(x,y,z);
- scene.add(group);
- rails.push({x,z,y,length,group});
+  group.position.set(x,groundHeight(x,z)+1.35,z);
+  scene.add(group);
+  rails.push({x,z,y:group.position.y,length,group});
 }
 
 /* ---------------- GATES ---------------- */
 
 const gates=[];
-const gateMat=new THREE.MeshStandardMaterial({color:0xffb832});
+const gateMat=new THREE.MeshStandardMaterial({
+  color:0xffb832,metalness:.25,roughness:.45
+});
 
-for(let z=-130;z>FINISH_Z+80;z-=115){
- const x=(Math.random()-.5)*12;
- const gate=new THREE.Group();
- for(const side of [-1,1]){
-  const post=new THREE.Mesh(
-   new THREE.CylinderGeometry(.12,.12,3.4,8),gateMat
+for (let z=-130;z>FINISH_Z+80;z-=115) {
+  const x=(Math.random()-.5)*12;
+  const gate=new THREE.Group();
+
+  for (const side of [-1,1]) {
+    const post=new THREE.Mesh(
+      new THREE.CylinderGeometry(.12,.12,3.4,8),
+      gateMat
+    );
+    post.position.set(side*2.1,1.7,0);
+    gate.add(post);
+  }
+
+  const bar=new THREE.Mesh(
+    new THREE.BoxGeometry(4.3,.16,.16),
+    gateMat
   );
-  post.position.set(side*2.1,1.7,0);
-  gate.add(post);
- }
- const bar=new THREE.Mesh(new THREE.BoxGeometry(4.3,.16,.16),gateMat);
- bar.position.y=3.3;
- gate.add(bar);
- gate.position.set(x,groundHeight(x,z),z);
- scene.add(gate);
- gates.push({x,z,passed:false});
+  bar.position.y=3.3;
+  gate.add(bar);
+  gate.position.set(x,groundHeight(x,z),z);
+  scene.add(gate);
+  gates.push({x,z,passed:false});
 }
 
-const finish=new THREE.Group();
-const finishMat=new THREE.MeshStandardMaterial({color:0x2b5d91});
-for(const side of [-1,1]){
- const post=new THREE.Mesh(new THREE.BoxGeometry(.6,7,.6),finishMat);
- post.position.set(side*7,3.5,0);
- finish.add(post);
+const finish = new THREE.Group();
+const finishMat = new THREE.MeshStandardMaterial({color:0x2b5d91});
+
+for (const side of [-1,1]) {
+  const post=new THREE.Mesh(
+    new THREE.BoxGeometry(.6,7,.6),
+    finishMat
+  );
+  post.position.set(side*7,3.5,0);
+  finish.add(post);
 }
-const finishBar=new THREE.Mesh(new THREE.BoxGeometry(14.5,.7,.7),finishMat);
+
+const finishBar=new THREE.Mesh(
+  new THREE.BoxGeometry(14.5,.7,.7),
+  finishMat
+);
 finishBar.position.y=7;
 finish.add(finishBar);
 finish.position.set(0,groundHeight(0,FINISH_Z),FINISH_Z);
@@ -334,467 +782,673 @@ scene.add(finish);
 
 /* ---------------- SKIER MODEL ---------------- */
 
-const skier=new THREE.Group();
+const skier = new THREE.Group();
 scene.add(skier);
-const body=new THREE.Group();
+
+const body = new THREE.Group();
 skier.add(body);
 
-const jacketMat=new THREE.MeshStandardMaterial({color:0xf04d36});
-const pantsMat=new THREE.MeshStandardMaterial({color:0x172d48});
-const helmetMat=new THREE.MeshStandardMaterial({color:0xffcf45});
-const skiMat=new THREE.MeshStandardMaterial({color:0x192a3b});
+const materials = {
+  jacket:new THREE.MeshStandardMaterial({color:appearance.jacket,roughness:.8}),
+  pants:new THREE.MeshStandardMaterial({color:appearance.pants,roughness:.85}),
+  helmet:new THREE.MeshStandardMaterial({color:appearance.helmet,roughness:.35,metalness:.12}),
+  ski:new THREE.MeshStandardMaterial({color:appearance.ski,roughness:.4,metalness:.2}),
+  glove:new THREE.MeshStandardMaterial({color:0x171e28}),
+  goggle:new THREE.MeshStandardMaterial({color:0x172c43,metalness:.65,roughness:.18}),
+  boot:new THREE.MeshStandardMaterial({color:0x202a37})
+};
 
-function part(parent,geo,mat,x,y,z){
- const m=new THREE.Mesh(geo,mat);
- m.position.set(x,y,z);
- m.castShadow=true;
- parent.add(m);
- return m;
+function part(parent,geometry,material,x,y,z) {
+  const mesh=new THREE.Mesh(geometry,material);
+  mesh.position.set(x,y,z);
+  mesh.castShadow=true;
+  mesh.receiveShadow=true;
+  parent.add(mesh);
+  return mesh;
 }
-
-part(body,new THREE.BoxGeometry(.55,.8,.4),jacketMat,0,1.05,0);
-part(body,new THREE.SphereGeometry(.26,20,16),helmetMat,0,1.68,0);
 
 const arms=[];
-for(const side of [-1,1]){
- part(body,new THREE.BoxGeometry(.2,.55,.22),pantsMat,side*.17,.42,0);
- part(body,new THREE.BoxGeometry(.2,.09,2.3),skiMat,side*.22,.08,-.15);
- const tip=part(body,new THREE.SphereGeometry(.105,12,10),skiMat,side*.22,.08,-1.28);
- tip.scale.set(1,.5,1.5);
+const legs=[];
+const skis=[];
 
- const arm=part(body,new THREE.CylinderGeometry(.075,.09,.72,8),jacketMat,side*.4,1,-.05);
- arm.rotation.z=side*-.55;
- arms.push(arm);
+function buildSkier() {
+  body.clear();
+  arms.length=0;
+  legs.length=0;
+  skis.length=0;
+
+  const jacket=materials.jacket;
+  const pants=materials.pants;
+  const helmet=materials.helmet;
+
+  /* Torso */
+  const torso=part(body,new THREE.CapsuleGeometry(.31,.55,5,10),jacket,0,1.12,0);
+  torso.scale.set(1,.95,.75);
+
+  /* Neck and head */
+  part(body,new THREE.CylinderGeometry(.105,.12,.2,10),materials.pants,0,1.56,0);
+  part(body,new THREE.SphereGeometry(.265,20,16),helmet,0,1.83,0);
+
+  /* Helmet brim */
+  const brim=part(body,new THREE.BoxGeometry(.48,.055,.34),helmet,0,1.79,-.17);
+
+  /* Goggles */
+  const goggles=part(body,new THREE.BoxGeometry(.39,.105,.08),materials.goggle,0,1.86,-.235);
+  goggles.rotation.x=-.08;
+
+  /* Jacket details */
+  part(body,new THREE.BoxGeometry(.035,.52,.025),materials.pants,0,1.12,-.24);
+  part(body,new THREE.BoxGeometry(.12,.12,.04),materials.helmet,.19,1.25,-.24);
+
+  /* Legs */
+  for (const side of [-1,1]) {
+    const leg=part(body,new THREE.CapsuleGeometry(.115,.48,4,8),pants,side*.17,.48,0);
+    leg.rotation.z=side*.07;
+    legs.push(leg);
+
+    part(body,new THREE.BoxGeometry(.22,.17,.38),materials.boot,side*.17,.12,-.12);
+
+    const ski=part(body,new THREE.BoxGeometry(.16,.075,2.45),materials.ski,side*.22,.055,-.35);
+    skis.push(ski);
+
+    const skiTip=part(body,new THREE.SphereGeometry(.085,12,10),materials.ski,side*.22,.06,-1.55);
+    skiTip.scale.set(1,.5,1.7);
+
+    const arm=part(body,new THREE.CapsuleGeometry(.085,.48,4,8),jacket,side*.4,1.1,0);
+    arm.rotation.z=side*-.55;
+    arms.push(arm);
+
+    part(body,new THREE.SphereGeometry(.105,12,10),materials.glove,side*.59,.78,-.04);
+  }
+
+  /* Backpack */
+  part(body,new THREE.BoxGeometry(.34,.46,.18),materials.pants,0,1.2,.19);
 }
 
-/* ---------------- SNOW ---------------- */
+function updateAppearance() {
+  for (const key of ["jacket","pants","helmet","ski"]) {
+    materials[key].color.set(appearance[key]);
+  }
+}
 
-const snowCount=500;
+/* ---------------- SNOW PARTICLES ---------------- */
+
+const snowCount=420;
 const snowPositions=new Float32Array(snowCount*3);
-for(let i=0;i<snowCount;i++){
- snowPositions[i*3]=(Math.random()-.5)*80;
- snowPositions[i*3+1]=Math.random()*35+2;
- snowPositions[i*3+2]=-Math.random()*100;
+
+for (let i=0;i<snowCount;i++) {
+  snowPositions[i*3]=(Math.random()-.5)*90;
+  snowPositions[i*3+1]=Math.random()*35+2;
+  snowPositions[i*3+2]=-Math.random()*100;
 }
+
 const snowGeo=new THREE.BufferGeometry();
 snowGeo.setAttribute("position",new THREE.BufferAttribute(snowPositions,3));
+
 const snowParticles=new THREE.Points(
- snowGeo,
- new THREE.PointsMaterial({color:0xffffff,size:.12,transparent:true,opacity:.8})
+  snowGeo,
+  new THREE.PointsMaterial({
+    color:0xffffff,
+    size:.13,
+    transparent:true,
+    opacity:.8
+  })
 );
 scene.add(snowParticles);
 
 /* ---------------- GAME STATE ---------------- */
 
 const keys={};
-let started=false,finished=false,crashed=false;
-let speed=0,lateralVelocity=0,score=0,trickCount=0,distance=0;
-let airborne=false,verticalVelocity=0,airTime=0;
-let grinding=false,grindTime=0,currentRail=null;
-let trickSpin=0,trickSpinTarget=0;
-let trickFlip=0,trickFlipTarget=0;
-let grabName="",trickCombo=1,airTrickStarted=false;
+
+let started=false;
+let finished=false;
+let crashed=false;
+let speed=0;
+let lateralVelocity=0;
+let score=0;
+let trickCount=0;
+let distance=0;
+let airborne=false;
+let verticalVelocity=0;
+let airTime=0;
+let grinding=false;
+let grindTime=0;
+let trickSpin=0;
+let trickSpinTarget=0;
+let trickFlip=0;
+let trickFlipTarget=0;
+let grabName="";
+let trickCombo=1;
+let airTrickStarted=false;
 let trickMessageTimer=0;
+let jumpPressed=false;
 
-function showTrick(message){
- document.getElementById("trickText").textContent=message;
- trickMessageTimer=2;
+function showTrick(message) {
+  document.getElementById("trickText").textContent=message;
+  trickMessageTimer=2;
 }
 
-function startGame(){
- started=true;
- finished=false;
- crashed=false;
- speed=10;
- lateralVelocity=0;
- score=0;
- trickCount=0;
- distance=0;
- airborne=false;
- verticalVelocity=0;
- airTime=0;
- grinding=false;
- grindTime=0;
- currentRail=null;
- trickSpin=0;
- trickSpinTarget=0;
- trickFlip=0;
- trickFlipTarget=0;
- grabName="";
- trickCombo=1;
- airTrickStarted=false;
+function resetRun() {
+  finished=false;
+  crashed=false;
+  started=true;
 
- ramps.forEach(r=>r.used=false);
- skier.position.set(0,groundHeight(0,0)+.9,0);
- skier.rotation.set(0,0,0);
- body.rotation.set(0,0,0);
- gates.forEach(g=>g.passed=false);
+  speed=10;
+  lateralVelocity=0;
+  score=0;
+  trickCount=0;
+  distance=0;
+  airborne=false;
+  verticalVelocity=0;
+  airTime=0;
+  grinding=false;
+  grindTime=0;
+  trickSpin=0;
+  trickSpinTarget=0;
+  trickFlip=0;
+  trickFlipTarget=0;
+  grabName="";
+  trickCombo=1;
+  airTrickStarted=false;
+  jumpPressed=false;
 
- document.getElementById("centerMessage").innerHTML="";
- document.getElementById("trickText").textContent="";
- document.getElementById("airLabel").textContent="";
- document.getElementById("progress").style.width="0%";
+  Object.keys(keys).forEach(k=>keys[k]=false);
+  ramps.forEach(r=>r.used=false);
+  gates.forEach(g=>g.passed=false);
+
+  skier.position.set(0,groundHeight(0,0)+.9,0);
+  skier.rotation.set(0,0,0);
+  body.rotation.set(0,0,0);
+
+  document.getElementById("centerMessage").style.display="none";
+  document.getElementById("trickText").textContent="";
+  document.getElementById("airLabel").textContent="";
+  document.getElementById("progress").style.width="0%";
+  trickMessageTimer=0;
 }
 
-function endGame(title,subtitle){
- finished=true;
- document.getElementById("centerMessage").innerHTML=
- `<h1>${title}</h1><p>${subtitle}</p><p>FINAL SCORE: ${Math.floor(score).toLocaleString()}</p><p>PRESS R TO PLAY AGAIN</p>`;
+function endGame(title,subtitle) {
+  finished=true;
+  const panel=document.getElementById("centerMessage");
+  panel.innerHTML=`<div><h1>${title}</h1><p>${subtitle}</p><p>FINAL SCORE: ${Math.floor(score).toLocaleString()}</p><p>PRESS R TO PLAY AGAIN</p><button class="smallButton" id="finishHub">BACK TO HUB</button></div>`;
+  panel.style.display="flex";
+  document.getElementById("finishHub").onclick=showHub;
 }
 
-function crash(){
- if(crashed||finished)return;
- crashed=true;
- speed=0;
- document.getElementById("centerMessage").innerHTML=
- "<h1>WIPEOUT!</h1><p>PRESS R TO TRY AGAIN</p>";
+function crash() {
+  if (crashed||finished) return;
+  crashed=true;
+  speed=0;
+  const panel=document.getElementById("centerMessage");
+  panel.innerHTML="<div><h1>WIPEOUT!</h1><p>PRESS R TO TRY AGAIN</p><button class='smallButton' id='crashHub'>BACK TO HUB</button></div>";
+  panel.style.display="flex";
+  document.getElementById("crashHub").onclick=showHub;
+}
+
+function showHub() {
+  started=false;
+  finished=false;
+  crashed=false;
+  speed=0;
+  airborne=false;
+  grinding=false;
+  skier.position.set(0,groundHeight(0,0)+.9,0);
+  skier.rotation.set(0,0,0);
+  body.rotation.set(0,0,0);
+  document.getElementById("hub").style.display="flex";
+  document.getElementById("runButtons").style.display="none";
+  document.getElementById("centerMessage").style.display="none";
 }
 
 /* ---------------- INPUT ---------------- */
 
 addEventListener("keydown",e=>{
- const k=e.key.toLowerCase();
- if(e.code==="Space")e.preventDefault();
+  const k=e.key.toLowerCase();
 
- if(k==="r"){
-  startGame();
-  return;
- }
+  if (e.code==="Space") e.preventDefault();
 
- if(e.code==="Space"){
-  if(!started||finished||crashed){
-   startGame();
-  }else if(!airborne){
-   airborne=true;
-   verticalVelocity=9+speed*.12;
-   airTime=0;
-   airTrickStarted=false;
-   showTrick("OLLIE!");
+  if (k==="r") {
+    if (started) resetRun();
+    return;
   }
- }
 
- if(started&&airborne&&!e.repeat){
-  if(k==="a"||k==="arrowleft"){
-   trickSpinTarget-=Math.PI*2;
-   airTrickStarted=true;
-   showTrick("360 SPIN!");
-  }
-  if(k==="d"||k==="arrowright"){
-   trickSpinTarget+=Math.PI*2;
-   airTrickStarted=true;
-   showTrick("360 SPIN!");
-  }
-  if(k==="w"){
-   trickFlipTarget-=Math.PI*2;
-   airTrickStarted=true;
-   showTrick("BACKFLIP!");
-  }
-  if(k==="s"){
-   trickFlipTarget+=Math.PI*2;
-   airTrickStarted=true;
-   showTrick("FRONTFLIP!");
-  }
-  const grabs={
-   "1":"SAFETY GRAB",
-   "2":"MUTE GRAB",
-   "3":"STALEFISH",
-   "4":"TAIL GRAB"
-  };
-  if(grabs[k]){
-   grabName=grabs[k];
-   airTrickStarted=true;
-   showTrick(grabName+"!");
-  }
- }
+  if (e.code==="Space") {
+    if (!started || finished || crashed) return;
 
- keys[k]=true;
+    if (!e.repeat) {
+      if (grinding) {
+        jumpPressed=true;
+      } else if (!airborne) {
+        airborne=true;
+        verticalVelocity=9+speed*.12;
+        airTime=0;
+        airTrickStarted=false;
+        showTrick("OLLIE!");
+      }
+    }
+  }
+
+  if (started&&airborne&&!e.repeat) {
+    if (k==="a"||k==="arrowleft") {
+      trickSpinTarget-=Math.PI*2;
+      airTrickStarted=true;
+      showTrick("360 SPIN!");
+    }
+    if (k==="d"||k==="arrowright") {
+      trickSpinTarget+=Math.PI*2;
+      airTrickStarted=true;
+      showTrick("360 SPIN!");
+    }
+    if (k==="w") {
+      trickFlipTarget-=Math.PI*2;
+      airTrickStarted=true;
+      showTrick("BACKFLIP!");
+    }
+    if (k==="s") {
+      trickFlipTarget+=Math.PI*2;
+      airTrickStarted=true;
+      showTrick("FRONTFLIP!");
+    }
+
+    const grabs={
+      "1":"SAFETY GRAB",
+      "2":"MUTE GRAB",
+      "3":"STALEFISH",
+      "4":"TAIL GRAB"
+    };
+
+    if (grabs[k]) {
+      grabName=grabs[k];
+      airTrickStarted=true;
+      showTrick(grabName+"!");
+    }
+  }
+
+  keys[k]=true;
 });
 
 addEventListener("keyup",e=>{
- keys[e.key.toLowerCase()]=false;
+  keys[e.key.toLowerCase()]=false;
 });
 
-document.getElementById("mapSelect").value=currentMap;
-document.getElementById("mapSelect").addEventListener("change",e=>{
- location.search="?map="+e.target.value;
-});
+document.getElementById("hubButton").onclick=showHub;
 
 /* ---------------- PHYSICS ---------------- */
 
-function updatePhysics(dt){
- if(!started||finished||crashed)return;
-
- const oldZ=skier.position.z;
- let steering=0;
- if(keys.a||keys.arrowleft)steering-=1;
- if(keys.d||keys.arrowright)steering+=1;
-
- const carvePower=12+speed*.35;
- lateralVelocity+=steering*carvePower*dt;
- lateralVelocity*=Math.pow(.90,dt*60);
- lateralVelocity=THREE.MathUtils.clamp(lateralVelocity,-12,12);
- skier.position.x+=lateralVelocity*dt;
-
- const here=groundHeight(skier.position.x,skier.position.z);
- const ahead=groundHeight(skier.position.x,skier.position.z-1);
- const slopeDrop=here-ahead;
-
- let acceleration=9.8*slopeDrop-speed*.025;
- if(keys.w&&!airborne)acceleration+=5;
- if(keys.s&&!airborne)acceleration-=10;
- speed+=acceleration*dt;
- speed=THREE.MathUtils.clamp(speed,3,34);
-
- skier.position.z-=speed*dt;
- distance=Math.max(0,-skier.position.z);
-
- let ground=groundHeight(skier.position.x,skier.position.z);
-
- /* Ramp launches */
- for(const ramp of ramps){
-  if(!ramp.used&&oldZ>ramp.z+2&&skier.position.z<=ramp.z+2&&skier.position.z>ramp.z-12){
-   if(Math.abs(skier.position.x-ramp.x)<ramp.width){
-    ramp.used=true;
-    airborne=true;
-    verticalVelocity=9+speed*.18;
-    airTime=0;
-    airTrickStarted=false;
-    showTrick("BIG AIR!");
-   }
-  }
- }
-
- /* Air control and animated trick rotations */
- if(airborne){
-  airTime+=dt;
-  verticalVelocity-=19*dt;
-  skier.position.y+=verticalVelocity*dt;
-
-  const turnRate=8.5;
-  trickSpin=moveToward(trickSpin,trickSpinTarget,turnRate*dt);
-  trickFlip=moveToward(trickFlip,trickFlipTarget,turnRate*dt);
-
-  body.rotation.x=trickFlip;
-  body.rotation.y=trickSpin;
-
-  if(grabName){
-   const grabLean=grabName==="MUTE GRAB"||grabName==="STALEFISH"?-.4:.4;
-   body.rotation.z=grabLean;
-   arms[0].rotation.z=-.95;
-   arms[1].rotation.z=.95;
-  }else{
-   body.rotation.z=0;
-   arms[0].rotation.z=-.55;
-   arms[1].rotation.z=.55;
-  }
-
-  /* Landing */
-  if(skier.position.y<=ground+.9&&verticalVelocity<0){
-   skier.position.y=ground+.9;
-
-   if(airTime>.3){
-    const flips=Math.floor(Math.abs(trickFlipTarget)/(Math.PI*2));
-    const spins=Math.floor(Math.abs(trickSpinTarget)/(Math.PI*2));
-    const completedFlip=Math.abs(trickFlip-trickFlipTarget)<.45;
-    const completedSpin=Math.abs(trickSpin-trickSpinTarget)<.45;
-
-    const successfulFlips=completedFlip?flips:0;
-    const successfulSpins=completedSpin?spins:0;
-
-    const grabPoints=grabName?350:0;
-    const trickPoints=successfulFlips*700+successfulSpins*500+grabPoints;
-    const hadTrick=successfulFlips+successfulSpins>0||grabName!=="";
-
-    if(hadTrick&&airTrickStarted){
-     trickCombo=Math.min(5,trickCombo+1);
-     const total=Math.floor((trickPoints+airTime*100)*trickCombo);
-     score+=total;
-     trickCount++;
-     showTrick("CLEAN LANDING! +"+total);
-    }else if(airTrickStarted){
-     trickCombo=1;
-     showTrick("TRICK INCOMPLETE");
-    }else{
-     const bonus=Math.floor(airTime*80);
-     score+=bonus;
-     showTrick("CLEAN LANDING +"+bonus);
-    }
-   }
-
-   airborne=false;
-   verticalVelocity=0;
-   trickSpin=0;
-   trickSpinTarget=0;
-   trickFlip=0;
-   trickFlipTarget=0;
-   grabName="";
-   airTrickStarted=false;
-   body.rotation.set(0,0,0);
-   arms[0].rotation.z=.55;
-   arms[1].rotation.z=-.55;
-  }
- }else{
-  skier.position.y=ground+.9;
- }
-
- /* Rail grinding */
- let touchingRail=null;
- if(!airborne){
-  for(const rail of rails){
-   const along=Math.abs(skier.position.z-rail.z);
-   const across=Math.abs(skier.position.x-rail.x);
-   const heightDiff=Math.abs(skier.position.y-rail.y);
-
-   if(along<rail.length/2-.4&&across<1.9&&heightDiff<2.2){
-    touchingRail=rail;
-    break;
-   }
-  }
- }
-
- if(touchingRail){
-  if(!grinding){
-   showTrick("RAIL GRIND!");
-   trickCombo=Math.min(5,trickCombo+1);
-  }
-  grinding=true;
-  currentRail=touchingRail;
-  grindTime+=dt;
-
-  skier.position.x=THREE.MathUtils.lerp(skier.position.x,touchingRail.x,.5);
-  skier.position.y=touchingRail.y+.3;
-  lateralVelocity*=.55;
-  skier.rotation.x=.12;
-  score+=260*dt;
-
-  if(keys[" "]){
-   grinding=false;
-   airborne=true;
-   verticalVelocity=8;
-   airTime=0;
-   showTrick("RAIL POP-OUT!");
-  }
- }else{
-  if(grinding){
-   showTrick("GRIND COMPLETE!");
-  }
-  grinding=false;
-  currentRail=null;
-  grindTime=0;
- }
-
- /* Carving lean */
- const desiredLean=-lateralVelocity*.055;
- skier.rotation.z=THREE.MathUtils.lerp(
-  skier.rotation.z,desiredLean,1-Math.pow(.001,dt)
- );
- skier.rotation.y=THREE.MathUtils.lerp(
-  skier.rotation.y,-lateralVelocity*.035,1-Math.pow(.001,dt)
- );
-
- score+=speed*dt*1.4;
-
- if(Math.abs(skier.position.x)>43)crash();
-
- /* Tree collisions */
- for(const obstacle of obstacles){
-  if(Math.abs(skier.position.z-obstacle.z)>2.5)continue;
-  const dx=skier.position.x-obstacle.x;
-  const dz=skier.position.z-obstacle.z;
-  if(Math.hypot(dx,dz)<obstacle.radius+.45&&!airborne){
-   crash();
-   break;
-  }
- }
-
- /* Gates */
- for(const gate of gates){
-  if(!gate.passed&&oldZ>gate.z&&skier.position.z<=gate.z){
-   gate.passed=true;
-   if(Math.abs(skier.position.x-gate.x)<2.5){
-    score+=250;
-    showTrick("GATE BONUS +250");
-   }
-  }
- }
-
- if(skier.position.z<=FINISH_Z){
-  endGame("RUN COMPLETE!","YOU MADE IT DOWN THE MOUNTAIN");
- }
-
- document.getElementById("speed").textContent="SPEED "+Math.round(speed*3.6)+" KM/H";
- document.getElementById("score").textContent="SCORE "+Math.floor(score).toLocaleString();
- document.getElementById("distance").textContent="DISTANCE "+Math.floor(distance)+" M";
- document.getElementById("tricks").textContent="TRICKS "+trickCount;
- document.getElementById("combo").textContent="COMBO x"+trickCombo;
- document.getElementById("progress").style.width=Math.min(100,distance/COURSE_LENGTH*100)+"%";
- document.getElementById("airLabel").textContent=airborne?"AIR TIME "+airTime.toFixed(1)+"s":grinding?"GRINDING!":"";
+function moveToward(current,target,maxDelta) {
+  if (Math.abs(target-current)<=maxDelta) return target;
+  return current+Math.sign(target-current)*maxDelta;
 }
 
-function moveToward(current,target,maxDelta){
- if(Math.abs(target-current)<=maxDelta)return target;
- return current+Math.sign(target-current)*maxDelta;
+function updatePhysics(dt) {
+  if (!started||finished||crashed) return;
+
+  const oldZ=skier.position.z;
+
+  let steering=0;
+  if (keys.a||keys.arrowleft) steering-=1;
+  if (keys.d||keys.arrowright) steering+=1;
+
+  const carvePower=12+speed*.35;
+  lateralVelocity+=steering*carvePower*dt;
+  lateralVelocity*=Math.pow(.90,dt*60);
+  lateralVelocity=THREE.MathUtils.clamp(lateralVelocity,-12,12);
+  skier.position.x+=lateralVelocity*dt;
+
+  const here=groundHeight(skier.position.x,skier.position.z);
+  const ahead=groundHeight(skier.position.x,skier.position.z-1);
+  const slopeDrop=here-ahead;
+
+  let acceleration=9.8*slopeDrop-speed*.025;
+  if (keys.w&&!airborne) acceleration+=5;
+  if (keys.s&&!airborne) acceleration-=10;
+
+  speed+=acceleration*dt;
+  speed=THREE.MathUtils.clamp(speed,3,34);
+  skier.position.z-=speed*dt;
+  distance=Math.max(0,-skier.position.z);
+
+  let ground=groundHeight(skier.position.x,skier.position.z);
+
+  /* Ramp launches */
+  for (const ramp of ramps) {
+    if (!ramp.used&&oldZ>ramp.z+2&&skier.position.z<=ramp.z+2&&skier.position.z>ramp.z-12) {
+      if (Math.abs(skier.position.x-ramp.x)<ramp.width) {
+        ramp.used=true;
+        airborne=true;
+        verticalVelocity=9+speed*.18;
+        airTime=0;
+        airTrickStarted=false;
+        showTrick("BIG AIR!");
+      }
+    }
+  }
+
+  /* Air movement */
+  if (airborne) {
+    airTime+=dt;
+    verticalVelocity-=19*dt;
+    skier.position.y+=verticalVelocity*dt;
+
+    trickSpin=moveToward(trickSpin,trickSpinTarget,8.5*dt);
+    trickFlip=moveToward(trickFlip,trickFlipTarget,8.5*dt);
+
+    body.rotation.x=trickFlip;
+    body.rotation.y=trickSpin;
+
+    if (grabName) {
+      body.rotation.z=(grabName==="MUTE GRAB"||grabName==="STALEFISH")?-.4:.4;
+      arms[0].rotation.z=-.95;
+      arms[1].rotation.z=.95;
+    } else {
+      body.rotation.z=0;
+      arms[0].rotation.z=-.55;
+      arms[1].rotation.z=.55;
+    }
+
+    ground=groundHeight(skier.position.x,skier.position.z);
+
+    if (skier.position.y<=ground+.9&&verticalVelocity<0) {
+      skier.position.y=ground+.9;
+
+      if (airTime>.3) {
+        const flips=Math.floor(Math.abs(trickFlipTarget)/(Math.PI*2));
+        const spins=Math.floor(Math.abs(trickSpinTarget)/(Math.PI*2));
+        const completedFlip=Math.abs(trickFlip-trickFlipTarget)<.55;
+        const completedSpin=Math.abs(trickSpin-trickSpinTarget)<.55;
+
+        const successfulFlips=completedFlip?flips:0;
+        const successfulSpins=completedSpin?spins:0;
+        const grabPoints=grabName?350:0;
+        const trickPoints=successfulFlips*700+successfulSpins*500+grabPoints;
+        const hadTrick=successfulFlips+successfulSpins>0||grabName!=="";
+
+        if (hadTrick&&airTrickStarted) {
+          trickCombo=Math.min(5,trickCombo+1);
+          const total=Math.floor((trickPoints+airTime*100)*trickCombo);
+          score+=total;
+          trickCount++;
+          showTrick("CLEAN LANDING! +"+total);
+        } else if (airTrickStarted) {
+          trickCombo=1;
+          showTrick("TRICK INCOMPLETE");
+        } else {
+          const bonus=Math.floor(airTime*80);
+          score+=bonus;
+          showTrick("CLEAN LANDING +"+bonus);
+        }
+      }
+
+      airborne=false;
+      verticalVelocity=0;
+      trickSpin=0;
+      trickSpinTarget=0;
+      trickFlip=0;
+      trickFlipTarget=0;
+      grabName="";
+      airTrickStarted=false;
+      body.rotation.set(0,0,0);
+      arms[0].rotation.z=-.55;
+      arms[1].rotation.z=.55;
+    }
+  } else {
+    skier.position.y=ground+.9;
+  }
+
+  /* Rail detection */
+  let touchingRail=null;
+
+  if (!airborne) {
+    for (const rail of rails) {
+      const along=Math.abs(skier.position.z-rail.z);
+      const across=Math.abs(skier.position.x-rail.x);
+      const heightDiff=Math.abs(skier.position.y-rail.y);
+
+      if (along<rail.length/2-.4&&across<1.9&&heightDiff<2.2) {
+        touchingRail=rail;
+        break;
+      }
+    }
+  }
+
+  if (touchingRail) {
+    if (!grinding) {
+      showTrick("RAIL GRIND!");
+      trickCombo=Math.min(5,trickCombo+1);
+    }
+
+    grinding=true;
+    grindTime+=dt;
+
+    skier.position.x=THREE.MathUtils.lerp(skier.position.x,touchingRail.x,.5);
+    skier.position.y=touchingRail.y+.3;
+    lateralVelocity*=.55;
+    skier.rotation.x=.12;
+    score+=260*dt;
+
+    if (jumpPressed) {
+      grinding=false;
+      airborne=true;
+      verticalVelocity=8;
+      airTime=0;
+      airTrickStarted=false;
+      jumpPressed=false;
+      showTrick("RAIL POP-OUT!");
+    }
+  } else {
+    if (grinding) showTrick("GRIND COMPLETE!");
+    grinding=false;
+    grindTime=0;
+  }
+
+  if (!grinding) {
+    jumpPressed=false;
+  }
+
+  /* Carving lean */
+  const desiredLean=-lateralVelocity*.055;
+  skier.rotation.z=THREE.MathUtils.lerp(
+    skier.rotation.z,desiredLean,1-Math.pow(.001,dt)
+  );
+  skier.rotation.y=THREE.MathUtils.lerp(
+    skier.rotation.y,-lateralVelocity*.035,1-Math.pow(.001,dt)
+  );
+
+  score+=speed*dt*1.4;
+
+  if (Math.abs(skier.position.x)>43) crash();
+
+  /* Nearby tree collisions */
+  for (const obstacle of obstacles) {
+    if (Math.abs(skier.position.z-obstacle.z)>2.5) continue;
+
+    const dx=skier.position.x-obstacle.x;
+    const dz=skier.position.z-obstacle.z;
+
+    if (Math.hypot(dx,dz)<obstacle.radius+.45&&!airborne) {
+      crash();
+      break;
+    }
+  }
+
+  /* Gates */
+  for (const gate of gates) {
+    if (!gate.passed&&oldZ>gate.z&&skier.position.z<=gate.z) {
+      gate.passed=true;
+      if (Math.abs(skier.position.x-gate.x)<2.5) {
+        score+=250;
+        showTrick("GATE BONUS +250");
+      }
+    }
+  }
+
+  if (skier.position.z<=FINISH_Z) {
+    endGame("RUN COMPLETE!","YOU MADE IT DOWN THE MOUNTAIN");
+  }
+
+  document.getElementById("speed").textContent="SPEED "+Math.round(speed*3.6)+" KM/H";
+  document.getElementById("score").textContent="SCORE "+Math.floor(score).toLocaleString();
+  document.getElementById("distance").textContent="DISTANCE "+Math.floor(distance)+" M";
+  document.getElementById("tricks").textContent="TRICKS "+trickCount;
+  document.getElementById("combo").textContent="COMBO x"+trickCombo;
+  document.getElementById("progress").style.width=Math.min(100,distance/COURSE_LENGTH*100)+"%";
+  document.getElementById("airLabel").textContent=airborne?"AIR TIME "+airTime.toFixed(1)+"s":grinding?"GRINDING!":"";
 }
 
 /* ---------------- CAMERA ---------------- */
 
-function updateCamera(dt){
- const desired=new THREE.Vector3(
-  skier.position.x*.65,
-  skier.position.y+5.8,
-  skier.position.z+13+speed*.06
- );
- camera.position.lerp(desired,1-Math.pow(.001,dt));
- camera.lookAt(skier.position.x,skier.position.y+1,skier.position.z-11);
- camera.rotation.z=THREE.MathUtils.lerp(
-  camera.rotation.z,-lateralVelocity*.006,.06
- );
+function updateCamera(dt) {
+  const desired=new THREE.Vector3(
+    skier.position.x*.65,
+    skier.position.y+5.8,
+    skier.position.z+13+speed*.06
+  );
+
+  camera.position.lerp(desired,1-Math.pow(.001,dt));
+  camera.lookAt(
+    skier.position.x,
+    skier.position.y+1,
+    skier.position.z-11
+  );
+
+  camera.rotation.z=THREE.MathUtils.lerp(
+    camera.rotation.z,-lateralVelocity*.006,Math.min(1,dt*4)
+  );
 }
 
-/* ---------------- SNOW PARTICLES ---------------- */
+/* ---------------- SNOW ---------------- */
 
-function updateSnow(dt){
- const p=snowGeo.attributes.position;
- for(let i=0;i<snowCount;i++){
-  p.array[i*3+1]-=3*dt;
-  p.array[i*3+2]+=speed*dt*.6;
-  if(p.array[i*3+1]<0)p.array[i*3+1]=30;
-  if(p.array[i*3+2]>15)p.array[i*3+2]=-100;
- }
- p.needsUpdate=true;
+function updateSnow(dt) {
+  const p=snowGeo.attributes.position;
+
+  for (let i=0;i<snowCount;i++) {
+    p.array[i*3+1]-=3*dt;
+    p.array[i*3+2]+=speed*dt*.6;
+
+    if (p.array[i*3+1]<0) p.array[i*3+1]=30;
+    if (p.array[i*3+2]>15) p.array[i*3+2]=-100;
+  }
+
+  p.needsUpdate=true;
+}
+
+/* ---------------- CHARACTER CUSTOMIZER ---------------- */
+
+function createSwatches(elementId,type) {
+  const container=document.getElementById(elementId);
+  container.innerHTML="";
+
+  for (const color of palettes[type]) {
+    const button=document.createElement("button");
+    button.className="swatch";
+    button.style.background=color;
+    button.title=color;
+
+    if (appearance[type].toLowerCase()===color.toLowerCase()) {
+      button.classList.add("selected");
+    }
+
+    button.onclick=()=>{
+      appearance[type]=color;
+      updateAppearance();
+      saveAppearance();
+      createSwatches(elementId,type);
+    };
+
+    container.appendChild(button);
+  }
+}
+
+function loadCustomizer() {
+  createSwatches("jacketSwatches","jacket");
+  createSwatches("pantsSwatches","pants");
+  createSwatches("helmetSwatches","helmet");
+  createSwatches("skiSwatches","ski");
+}
+
+document.getElementById("outfitSelect").onchange=e=>{
+  const colors=outfits[e.target.value];
+  appearance.jacket=colors[0];
+  appearance.pants=colors[1];
+  appearance.helmet=colors[2];
+  appearance.ski=colors[3];
+
+  updateAppearance();
+  saveAppearance();
+  loadCustomizer();
+};
+
+document.getElementById("mapSelect").value=currentMap;
+document.getElementById("mapInfo").textContent=MAP.description;
+
+document.getElementById("mapSelect").onchange=e=>{
+  const next=e.target.value;
+  location.search="?map="+encodeURIComponent(next);
+};
+
+document.getElementById("startButton").onclick=()=>{
+  document.getElementById("hub").style.display="none";
+  document.getElementById("runButtons").style.display="block";
+  resetRun();
+};
+
+/* ---------------- HUB PREVIEW ---------------- */
+
+function updatePreviewCamera() {
+  camera.position.set(0,4.2,8);
+  camera.lookAt(0,1.1,0);
+  skier.position.set(0,0,0);
+  skier.rotation.set(0,.35,0);
+  body.rotation.set(0,0,0);
 }
 
 /* ---------------- MAIN LOOP ---------------- */
 
 const clock=new THREE.Clock();
 
-function animate(){
- requestAnimationFrame(animate);
- const dt=Math.min(clock.getDelta(),.035);
+function animate() {
+  requestAnimationFrame(animate);
 
- updatePhysics(dt);
- updateCamera(dt);
- updateSnow(dt);
+  const dt=Math.min(clock.getDelta(),.035);
 
- if(trickMessageTimer>0){
-  trickMessageTimer-=dt;
-  if(trickMessageTimer<=0){
-   document.getElementById("trickText").textContent="";
+  if (started) {
+    updatePhysics(dt);
+    updateCamera(dt);
+  } else {
+    /* Gentle character turntable in the hub */
+    skier.rotation.y+=dt*.22;
   }
- }
 
- renderer.render(scene,camera);
+  updateSnow(dt);
+
+  if (trickMessageTimer>0) {
+    trickMessageTimer-=dt;
+    if (trickMessageTimer<=0) {
+      document.getElementById("trickText").textContent="";
+    }
+  }
+
+  renderer.render(scene,camera);
 }
 
+/* ---------------- INITIALIZE ---------------- */
+
+buildSkier();
+updateAppearance();
+loadCustomizer();
+
 skier.position.set(0,groundHeight(0,0)+.9,0);
-camera.position.set(0,12,15);
-camera.lookAt(0,5,-10);
+updatePreviewCamera();
+
+document.getElementById("hub").style.display="flex";
+document.getElementById("runButtons").style.display="none";
+
 animate();
 
 addEventListener("resize",()=>{
- camera.aspect=innerWidth/innerHeight;
- camera.updateProjectionMatrix();
- renderer.setSize(innerWidth,innerHeight);
+  camera.aspect=innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);
 });
 </script>
 </body>
