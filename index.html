@@ -2,161 +2,136 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Velocity Arena</title>
-
+<title>Slope Tricks</title>
 <style>
-body {
-    margin: 0;
-    overflow: hidden;
-    font-family: Arial, sans-serif;
-}
-
-#info {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    color: white;
-    background: rgba(0,0,0,.6);
-    padding: 10px;
-    border-radius: 8px;
-}
+  body { margin:0; background:#0b1d33; overflow:hidden; font-family:sans-serif; }
+  canvas { display:block; margin:auto; background:#cfe8ff; }
 </style>
 </head>
-
 <body>
+<canvas id="c" width="900" height="500"></canvas>
+<script>
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
 
-<div id="info">
-WASD = Move<br>
-Space = Jump
-</div>
-
-<script type="module">
-
-import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
-
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
-
-const camera = new THREE.PerspectiveCamera(
-75,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
-);
-
-const renderer = new THREE.WebGLRenderer();
-renderer.setSize(window.innerWidth, window.innerHeight);
-document.body.appendChild(renderer.domElement);
-
-const light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(10,20,10);
-scene.add(light);
-
-scene.add(new THREE.AmbientLight(0xffffff,0.6));
-
-const floor = new THREE.Mesh(
-new THREE.BoxGeometry(50,1,50),
-new THREE.MeshStandardMaterial({color:0x55aa55})
-);
-
-floor.position.y=-0.5;
-scene.add(floor);
-
-function platform(x,y,z,w,h,d,color=0x6666ff){
-
-const p = new THREE.Mesh(
-new THREE.BoxGeometry(w,h,d),
-new THREE.MeshStandardMaterial({color})
-);
-
-p.position.set(x,y,z);
-
-scene.add(p);
-
-return p;
+// Terrain: a downhill slope with bumps and ramps
+function groundY(x) {
+  return 200 + x * 0.35 + Math.sin(x / 140) * 30 + Math.max(0, Math.sin(x / 600)) * -60;
+}
+function slopeAngle(x) {
+  return Math.atan2(groundY(x + 2) - groundY(x - 2), 4);
 }
 
-platform(0,2,-8,4,1,4);
-platform(0,4,-16,4,1,4);
-platform(4,6,-24,4,1,4);
-platform(-4,8,-32,4,1,4);
+const p = { x: 0, y: groundY(0) - 10, vx: 3, vy: 0, rot: 0, air: false, spin: 0, flips: 0 };
+let score = 0, best = 0, msg = '', msgT = 0, keys = {}, crashed = false, crashT = 0;
 
-const player = new THREE.Mesh(
-new THREE.BoxGeometry(1,2,1),
-new THREE.MeshStandardMaterial({color:0xff3333})
-);
+addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') e.preventDefault(); });
+addEventListener('keyup',   e => keys[e.code] = false);
 
-player.position.y=1;
-scene.add(player);
+function reset() {
+  Object.assign(p, { x: 0, y: groundY(0) - 10, vx: 3, vy: 0, rot: 0, air: false, spin: 0, flips: 0 });
+  score = 0; crashed = false;
+}
+function say(t) { msg = t; msgT = 90; }
 
-const keys={};
+function update() {
+  if (crashed) { if (--crashT <= 0) reset(); return; }
+  const g = groundY(p.x), a = slopeAngle(p.x);
 
-document.addEventListener("keydown",e=>{
-keys[e.key.toLowerCase()]=true;
-});
+  if (!p.air) {
+    // Riding: accelerate downhill, brake/tuck with keys
+    p.vx += Math.sin(a) * 0.12;
+    if (keys.ArrowDown) p.vx += 0.05;
+    if (keys.ArrowUp)   p.vx *= 0.985;
+    p.vx = Math.max(1.5, Math.min(p.vx, 14));
+    p.x += p.vx * Math.cos(a);
+    p.y = groundY(p.x) - 10;
+    p.rot = a;
+    p.spin = 0;
+    // Jump
+    if (keys.Space) {
+      p.air = true;
+      p.vy = -7 + Math.sin(a) * p.vx * 0.5;
+      p.flips = 0;
+    }
+    // Auto-pop off lips where the slope flattens upward
+    if (slopeAngle(p.x - 6) - a > 0.12) {
+      p.air = true; p.vy = Math.sin(a) * p.vx; p.flips = 0;
+    }
+  } else {
+    p.vy += 0.3;
+    p.x += p.vx;
+    p.y += p.vy;
+    // Spin control
+    if (keys.ArrowLeft)  p.spin -= 0.012;
+    if (keys.ArrowRight) p.spin += 0.012;
+    p.spin = Math.max(-0.22, Math.min(0.22, p.spin));
+    p.rot += p.spin;
+    p.flips += p.spin;
 
-document.addEventListener("keyup",e=>{
-keys[e.key.toLowerCase()]=false;
-});
-
-let velocityY=0;
-let grounded=true;
-
-function animate(){
-
-requestAnimationFrame(animate);
-
-let speed=0.12;
-
-if(keys["w"]) player.position.z-=speed;
-if(keys["s"]) player.position.z+=speed;
-if(keys["a"]) player.position.x-=speed;
-if(keys["d"]) player.position.x+=speed;
-
-if(keys[" "] && grounded){
-
-velocityY=0.22;
-grounded=false;
-
+    // Landing
+    if (p.y >= groundY(p.x) - 10) {
+      const la = slopeAngle(p.x);
+      let diff = ((p.rot - la) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
+      if (Math.abs(diff) < 0.7) {
+        const n = Math.floor(Math.abs(p.flips) / (Math.PI * 2) + 0.25);
+        const pts = 50 + n * 500;
+        score += pts;
+        best = Math.max(best, score);
+        say(n ? `${n * 360 === 360 ? 'FLIP' : n + 'x FLIP'} +${pts}` : `Clean landing +${pts}`);
+        p.air = false; p.y = groundY(p.x) - 10; p.rot = la;
+        p.vx = Math.min(14, p.vx + 0.5);
+      } else {
+        crashed = true; crashT = 80; say('WIPEOUT');
+      }
+    }
+  }
 }
 
-velocityY-=0.01;
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  const camX = p.x - 250, camY = p.y - 250;
 
-player.position.y+=velocityY;
+  // Mountains backdrop
+  ctx.fillStyle = '#a9c8e8';
+  for (let i = -1; i < 6; i++) {
+    const bx = i * 300 - (camX * 0.2) % 300;
+    ctx.beginPath(); ctx.moveTo(bx, H); ctx.lineTo(bx + 150, 120); ctx.lineTo(bx + 300, H); ctx.fill();
+  }
 
-if(player.position.y<=1){
+  // Snow
+  ctx.beginPath(); ctx.moveTo(0, H);
+  for (let sx = 0; sx <= W; sx += 6) ctx.lineTo(sx, groundY(sx + camX) - camY);
+  ctx.lineTo(W, H); ctx.closePath();
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.strokeStyle = '#8fb4d9'; ctx.lineWidth = 3; ctx.stroke();
 
-player.position.y=1;
-velocityY=0;
-grounded=true;
+  // Rider
+  ctx.save();
+  ctx.translate(p.x - camX, p.y - camY);
+  ctx.rotate(p.rot);
+  ctx.fillStyle = crashed ? '#999' : '#e63946';
+  ctx.fillRect(-8, -22, 16, 22);             // body
+  ctx.fillStyle = '#ffd6a5';
+  ctx.beginPath(); ctx.arc(0, -28, 7, 0, 7); ctx.fill(); // head
+  ctx.fillStyle = '#222';
+  ctx.fillRect(-26, 0, 52, 4);               // skis
+  ctx.restore();
 
+  // HUD
+  ctx.fillStyle = '#0b1d33'; ctx.font = 'bold 20px sans-serif';
+  ctx.fillText('Score ' + score, 16, 28);
+  ctx.fillText('Best ' + best, 16, 54);
+  ctx.fillText('Speed ' + p.vx.toFixed(1), 16, 80);
+  ctx.font = '13px sans-serif';
+  ctx.fillText('SPACE jump · ←/→ spin in air · ↓ speed up · ↑ slow down', 16, H - 14);
+  if (msgT-- > 0) {
+    ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(msg, W / 2, 120); ctx.textAlign = 'left';
+  }
 }
 
-camera.position.x=player.position.x;
-camera.position.y=player.position.y+6;
-camera.position.z=player.position.z+10;
-
-camera.lookAt(player.position);
-
-renderer.render(scene,camera);
-
-}
-
-animate();
-
-window.addEventListener("resize",()=>{
-
-camera.aspect=window.innerWidth/window.innerHeight;
-camera.updateProjectionMatrix();
-
-renderer.setSize(
-window.innerWidth,
-window.innerHeight
-);
-
-});
-
+(function loop() { update(); draw(); requestAnimationFrame(loop); })();
 </script>
-
 </body>
 </html>
