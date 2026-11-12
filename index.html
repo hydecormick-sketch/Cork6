@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -87,7 +86,15 @@ body {
 </head>
 
 <body>
-<div id="hud">
+<div id="hud"><div class="stat">
+  MAP:
+  <select id="mapSelect" style="font-size:14px;padding:5px;border-radius:5px">
+    <option value="alpine">Alpine Peaks</option>
+    <option value="forest">Frozen Forest</option>
+    <option value="volcano">Volcano Ridge</option>
+    <option value="extreme">Extreme Park</option>
+  </select>
+</div>
   <div id="logo">ALPINE RUSH</div>
   <div class="stat" id="speed">SPEED 0 KM/H</div>
   <div class="stat" id="score">SCORE 0</div>
