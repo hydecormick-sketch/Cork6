@@ -1,137 +1,767 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<title>Slope Tricks</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mountain Rush 3D</title>
+
 <style>
-  body { margin:0; background:#0b1d33; overflow:hidden; font-family:sans-serif; }
-  canvas { display:block; margin:auto; background:#cfe8ff; }
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  overflow: hidden;
+  font-family: Arial, sans-serif;
+  background: #9bd9f5;
+}
+
+canvas {
+  display: block;
+}
+
+#hud {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  color: white;
+  background: #142b3cbb;
+  padding: 15px 22px;
+  border-radius: 14px;
+  line-height: 1.7;
+  pointer-events: none;
+}
+
+#hud h2 {
+  margin: 0;
+  color: #8ce7ff;
+}
+
+#mapSelect {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-size: 15px;
+  background: white;
+}
+
+#instructions {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: white;
+  background: #142b3cbb;
+  padding: 10px 18px;
+  border-radius: 12px;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+#finish {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: #061c2ddd;
+  color: white;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
+.panel {
+  background: #17364e;
+  border: 2px solid #74dfff;
+  border-radius: 22px;
+  padding: 35px;
+  width: min(90%, 420px);
+  box-shadow: 0 0 35px #4bcaff55;
+}
+
+.panel h1 {
+  font-size: 36px;
+  color: #83e7ff;
+  margin: 5px;
+}
+
+#finalScore {
+  font-size: 42px;
+  font-weight: bold;
+  color: #ffe16b;
+  margin: 20px;
+}
+
+button {
+  background: #37bce9;
+  border: none;
+  padding: 13px 22px;
+  border-radius: 10px;
+  margin: 6px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  color: #082438;
+}
+
+button:hover {
+  background: #8ceaff;
+  transform: scale(1.04);
+}
+
+#status {
+  color: #ffe16b;
+  font-weight: bold;
+}
 </style>
 </head>
+
 <body>
-<canvas id="c" width="900" height="500"></canvas>
-<script>
-const cv = document.getElementById('c'), ctx = cv.getContext('2d');
-const W = cv.width, H = cv.height;
 
-// Terrain: a downhill slope with bumps and ramps
-function groundY(x) {
-  return 200 + x * 0.35 + Math.sin(x / 140) * 30 + Math.max(0, Math.sin(x / 600)) * -60;
+<div id="hud">
+  <h2>🏔 MOUNTAIN RUSH</h2>
+  Score: <span id="score">0</span><br>
+  Speed: <span id="speed">0</span> km/h<br>
+  Tricks: <span id="tricks">0</span><br>
+  Map: <span id="mapName">Alpine Peaks</span><br>
+  <span id="status">READY!</span>
+</div>
+
+<select id="mapSelect">
+  <option value="0">🏔 Alpine Peaks</option>
+  <option value="1">🌲 Frozen Forest</option>
+  <option value="2">🌋 Volcano Mountain</option>
+</select>
+
+<div id="instructions">
+  A/D or ←/→ Steer | SPACE Jump | F Front Flip | B Backflip
+</div>
+
+<div id="finish">
+  <div class="panel">
+    <h1>🏁 FINISH!</h1>
+    <p>You made it down the mountain!</p>
+    <div id="finalScore">0 POINTS</div>
+    <p id="finalTricks"></p>
+    <button onclick="restartGame()">↻ Restart Map</button>
+    <button onclick="nextMap()">🗺 Change Map</button>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+  }
 }
-function slopeAngle(x) {
-  return Math.atan2(groundY(x + 2) - groundY(x - 2), 4);
+</script>
+
+<script type="module">
+
+import * as THREE from 'three';
+
+// ---------------------------------
+// SCENE
+// ---------------------------------
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9bd9f5);
+scene.fog = new THREE.Fog(0x9bd9f5, 70, 240);
+
+const camera = new THREE.PerspectiveCamera(
+  65,
+  window.innerWidth / window.innerHeight,
+  0.1,
+  1000
+);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true
+});
+
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x667788, 2));
+
+const sunlight = new THREE.DirectionalLight(0xffffff, 2);
+sunlight.position.set(-30, 60, -30);
+sunlight.castShadow = true;
+scene.add(sunlight);
+
+// ---------------------------------
+// MAP SETTINGS
+// ---------------------------------
+
+const maps = [
+  {
+    name: "Alpine Peaks",
+    sky: 0x9bd9f5,
+    snow: 0xeaf7ff,
+    mountain: 0x809bb0,
+    tree: 0x244e35,
+    obstacle: 0x777777,
+    decoration: 0xffffff
+  },
+  {
+    name: "Frozen Forest",
+    sky: 0x9aaed8,
+    snow: 0xd8eaff,
+    mountain: 0x526e9c,
+    tree: 0x173b4c,
+    obstacle: 0x526e9c,
+    decoration: 0xc5edff
+  },
+  {
+    name: "Volcano Mountain",
+    sky: 0xffaa77,
+    snow: 0xffd7b0,
+    mountain: 0x633c36,
+    tree: 0x542d24,
+    obstacle: 0xb94b22,
+    decoration: 0xff6b24
+  }
+];
+
+let currentMap = 0;
+let mountainObjects = [];
+
+const courseLength = 550;
+
+// ---------------------------------
+// PLAYER
+// ---------------------------------
+
+const player = new THREE.Group();
+scene.add(player);
+
+const body = new THREE.Group();
+player.add(body);
+
+function makePart(geometry, color, x, y, z) {
+  const mesh = new THREE.Mesh(
+    geometry,
+    new THREE.MeshStandardMaterial({ color })
+  );
+  mesh.position.set(x, y, z);
+  mesh.castShadow = true;
+  body.add(mesh);
+  return mesh;
 }
 
-const p = { x: 0, y: groundY(0) - 10, vx: 3, vy: 0, rot: 0, air: false, spin: 0, flips: 0 };
-let score = 0, best = 0, msg = '', msgT = 0, keys = {}, crashed = false, crashT = 0;
+// Skier body
+makePart(
+  new THREE.CapsuleGeometry(0.28, 0.8, 5, 10),
+  0xff5722, 0, 0.9, 0
+);
 
-addEventListener('keydown', e => { keys[e.code] = true; if (e.code === 'Space') e.preventDefault(); });
-addEventListener('keyup',   e => keys[e.code] = false);
+// Head
+makePart(
+  new THREE.SphereGeometry(0.24, 16, 16),
+  0xffcc99, 0, 1.55, 0
+);
 
-function reset() {
-  Object.assign(p, { x: 0, y: groundY(0) - 10, vx: 3, vy: 0, rot: 0, air: false, spin: 0, flips: 0 });
-  score = 0; crashed = false;
+// Helmet
+makePart(
+  new THREE.SphereGeometry(0.26, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
+  0x202f55, 0, 1.68, 0
+);
+
+// Arms
+const armGeometry = new THREE.CylinderGeometry(0.07, 0.07, 0.75, 8);
+
+for (let side of [-1, 1]) {
+  const arm = makePart(armGeometry, 0xffcc99, side * 0.36, 1.05, 0);
+  arm.rotation.z = side * -0.7;
 }
-function say(t) { msg = t; msgT = 90; }
 
-function update() {
-  if (crashed) { if (--crashT <= 0) reset(); return; }
-  const g = groundY(p.x), a = slopeAngle(p.x);
+// Legs
+for (let side of [-1, 1]) {
+  const leg = makePart(
+    new THREE.CylinderGeometry(0.10, 0.10, 0.65, 8),
+    0x182b49,
+    side * 0.16,
+    0.38,
+    0
+  );
+}
 
-  if (!p.air) {
-    // Riding: accelerate downhill, brake/tuck with keys
-    p.vx += Math.sin(a) * 0.12;
-    if (keys.ArrowDown) p.vx += 0.05;
-    if (keys.ArrowUp)   p.vx *= 0.985;
-    p.vx = Math.max(1.5, Math.min(p.vx, 14));
-    p.x += p.vx * Math.cos(a);
-    p.y = groundY(p.x) - 10;
-    p.rot = a;
-    p.spin = 0;
+// Skis
+const skis = [];
+
+for (let side of [-1, 1]) {
+  const ski = new THREE.Mesh(
+    new THREE.BoxGeometry(0.15, 0.07, 2.4),
+    new THREE.MeshStandardMaterial({ color: 0xffd52a })
+  );
+
+  ski.position.set(side * 0.23, 0.04, 0.15);
+  ski.castShadow = true;
+  body.add(ski);
+  skis.push(ski);
+}
+
+// ---------------------------------
+// TERRAIN
+// ---------------------------------
+
+function terrainHeight(x, z) {
+  return 17
+    - z * 0.042
+    + Math.sin(z * 0.035) * 1.6
+    + Math.sin(x * 0.15 + z * 0.025) * 0.8;
+}
+
+let terrain;
+
+function buildTerrain() {
+  if (terrain) {
+    scene.remove(terrain);
+    terrain.geometry.dispose();
+  }
+
+  const geometry = new THREE.PlaneGeometry(
+    90, courseLength, 80, 300
+  );
+
+  geometry.rotateX(-Math.PI / 2);
+
+  const positions = geometry.attributes.position;
+
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i);
+    const z = -positions.getZ(i);
+
+    positions.setY(i, terrainHeight(x, z));
+  }
+
+  geometry.computeVertexNormals();
+
+  terrain = new THREE.Mesh(
+    geometry,
+    new THREE.MeshStandardMaterial({
+      color: maps[currentMap].snow,
+      roughness: 0.9
+    })
+  );
+
+  terrain.receiveShadow = true;
+  scene.add(terrain);
+}
+
+// ---------------------------------
+// MOUNTAIN DECORATIONS
+// ---------------------------------
+
+function clearDecorations() {
+  mountainObjects.forEach(obj => scene.remove(obj));
+  mountainObjects = [];
+}
+
+function addObject(obj) {
+  scene.add(obj);
+  mountainObjects.push(obj);
+}
+
+function makeTree(x, z, scale) {
+  const group = new THREE.Group();
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.2, 1, 7),
+    new THREE.MeshStandardMaterial({ color: 0x65452c })
+  );
+
+  trunk.position.y = 0.5;
+  group.add(trunk);
+
+  const treeColor = maps[currentMap].tree;
+
+  for (let i = 0; i < 3; i++) {
+    const cone = new THREE.Mesh(
+      new THREE.ConeGeometry(1.05 - i * 0.2, 1.8, 8),
+      new THREE.MeshStandardMaterial({ color: treeColor })
+    );
+
+    cone.position.y = 1.3 + i * 0.8;
+    group.add(cone);
+  }
+
+  group.position.set(x, terrainHeight(x, z), z);
+  group.scale.setScalar(scale);
+
+  addObject(group);
+}
+
+function makeRock(x, z) {
+  const rock = new THREE.Mesh(
+    new THREE.DodecahedronGeometry(0.8, 0),
+    new THREE.MeshStandardMaterial({
+      color: maps[currentMap].obstacle
+    })
+  );
+
+  rock.position.set(x, terrainHeight(x, z) + 0.5, z);
+  rock.scale.set(1, 0.8, 1.2);
+  rock.castShadow = true;
+
+  addObject(rock);
+}
+
+function buildDecorations() {
+  clearDecorations();
+
+  for (let z = 8; z < courseLength; z += 9) {
+    for (let side of [-1, 1]) {
+      makeTree(
+        side * (19 + Math.random() * 13),
+        z + Math.random() * 4,
+        1 + Math.random() * 1.3
+      );
+    }
+  }
+
+  // Obstacles on the course
+  for (let z = 35; z < courseLength - 20; z += 27) {
+    const x = (Math.random() - 0.5) * 28;
+    makeRock(x, z);
+  }
+
+  // Distant mountain peaks
+  for (let i = 0; i < 15; i++) {
+    const x = (i - 7) * 15;
+
+    const peak = new THREE.Mesh(
+      new THREE.ConeGeometry(12 + Math.random() * 7, 35 + Math.random() * 20, 6),
+      new THREE.MeshStandardMaterial({
+        color: maps[currentMap].mountain
+      })
+    );
+
+    peak.position.set(
+      x,
+      terrainHeight(x, 90) + 18,
+      110 + Math.random() * 20
+    );
+
+    addObject(peak);
+  }
+}
+
+// ---------------------------------
+// GAME VARIABLES
+// ---------------------------------
+
+let score = 0;
+let tricks = 0;
+let distance = 0;
+let speed = 0;
+let playerX = 0;
+
+let jumping = false;
+let jumpHeight = 0;
+let jumpVelocity = 0;
+
+let flipping = false;
+let flipRotation = 0;
+let flipDirection = 1;
+let flipStart = 0;
+let flipCount = 0;
+
+let gameOver = false;
+let gameStarted = false;
+
+const keys = {};
+
+document.addEventListener("keydown", e => {
+  keys[e.code] = true;
+
+  if (e.code === "Space") e.preventDefault();
+
+  if (e.code === "KeyF" && jumping && !flipping) {
+    startFlip(1);
+  }
+
+  if (e.code === "KeyB" && jumping && !flipping) {
+    startFlip(-1);
+  }
+});
+
+document.addEventListener("keyup", e => {
+  keys[e.code] = false;
+});
+
+// ---------------------------------
+// TRICKS
+// ---------------------------------
+
+function startFlip(direction) {
+  if (!jumping || flipping) return;
+
+  flipping = true;
+  flipDirection = direction;
+  flipRotation = 0;
+  flipStart = 0;
+}
+
+function updateFlip(delta) {
+  if (!flipping) return;
+
+  const flipSpeed = 9;
+  flipStart += delta * flipSpeed;
+
+  body.rotation.x = flipStart * flipDirection;
+
+  flipRotation = Math.floor(flipStart / (Math.PI * 2));
+
+  if (flipStart >= Math.PI * 2) {
+    flipping = false;
+
+    const completed = Math.floor(flipStart / (Math.PI * 2));
+
+    tricks += completed;
+    score += completed * 500;
+
+    document.getElementById("status").textContent =
+      completed > 1 ? "INSANE COMBO!" : "NICE FLIP!";
+  }
+}
+
+// ---------------------------------
+// JUMPING
+// ---------------------------------
+
+function jump() {
+  if (!jumping && distance < courseLength - 5) {
+    jumping = true;
+    jumpVelocity = 12;
+    jumpHeight = 0;
+  }
+}
+
+// ---------------------------------
+// GAME RESET
+// ---------------------------------
+
+function restartGame() {
+  score = 0;
+  tricks = 0;
+  distance = 0;
+  speed = 0;
+  playerX = 0;
+
+  jumping = false;
+  jumpHeight = 0;
+  jumpVelocity = 0;
+
+  flipping = false;
+  flipRotation = 0;
+  flipStart = 0;
+
+  gameOver = false;
+  gameStarted = true;
+
+  body.rotation.set(0, 0, 0);
+  player.position.set(0, terrainHeight(0, 0), 0);
+
+  document.getElementById("finish").style.display = "none";
+  document.getElementById("status").textContent = "GO!";
+  document.getElementById("score").textContent = "0";
+  document.getElementById("tricks").textContent = "0";
+}
+
+function nextMap() {
+  currentMap = (currentMap + 1) % maps.length;
+  document.getElementById("mapSelect").value = currentMap;
+  loadMap();
+}
+
+function loadMap() {
+  const map = maps[currentMap];
+
+  scene.background = new THREE.Color(map.sky);
+  scene.fog.color.set(map.sky);
+
+  document.getElementById("mapName").textContent = map.name;
+
+  buildTerrain();
+  buildDecorations();
+  restartGame();
+}
+
+document.getElementById("mapSelect").addEventListener("change", e => {
+  currentMap = Number(e.target.value);
+  loadMap();
+});
+
+// ---------------------------------
+// FINISH
+// ---------------------------------
+
+function finishGame() {
+  gameOver = true;
+
+  document.getElementById("finalScore").textContent =
+    score.toLocaleString() + " POINTS";
+
+  document.getElementById("finalTricks").textContent =
+    "You completed " + tricks + " flips!";
+
+  document.getElementById("finish").style.display = "flex";
+}
+
+// ---------------------------------
+// UPDATE GAME
+// ---------------------------------
+
+let lastTime = 0;
+
+function animate(time) {
+  requestAnimationFrame(animate);
+
+  const delta = Math.min((time - lastTime) / 1000, 0.04);
+  lastTime = time;
+
+  if (gameStarted && !gameOver) {
+    // Speed gradually increases
+    speed = Math.min(speed + delta * 1.8, 27);
+
+    // Steering
+    if (keys["ArrowLeft"] || keys["KeyA"]) {
+      playerX -= delta * 13;
+    }
+
+    if (keys["ArrowRight"] || keys["KeyD"]) {
+      playerX += delta * 13;
+    }
+
+    playerX = THREE.MathUtils.clamp(playerX, -38, 38);
+
     // Jump
-    if (keys.Space) {
-      p.air = true;
-      p.vy = -7 + Math.sin(a) * p.vx * 0.5;
-      p.flips = 0;
+    if (keys["Space"] && !jumping) {
+      jump();
     }
-    // Auto-pop off lips where the slope flattens upward
-    if (slopeAngle(p.x - 6) - a > 0.12) {
-      p.air = true; p.vy = Math.sin(a) * p.vx; p.flips = 0;
-    }
-  } else {
-    p.vy += 0.3;
-    p.x += p.vx;
-    p.y += p.vy;
-    // Spin control
-    if (keys.ArrowLeft)  p.spin -= 0.012;
-    if (keys.ArrowRight) p.spin += 0.012;
-    p.spin = Math.max(-0.22, Math.min(0.22, p.spin));
-    p.rot += p.spin;
-    p.flips += p.spin;
 
-    // Landing
-    if (p.y >= groundY(p.x) - 10) {
-      const la = slopeAngle(p.x);
-      let diff = ((p.rot - la) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI;
-      if (Math.abs(diff) < 0.7) {
-        const n = Math.floor(Math.abs(p.flips) / (Math.PI * 2) + 0.25);
-        const pts = 50 + n * 500;
-        score += pts;
-        best = Math.max(best, score);
-        say(n ? `${n * 360 === 360 ? 'FLIP' : n + 'x FLIP'} +${pts}` : `Clean landing +${pts}`);
-        p.air = false; p.y = groundY(p.x) - 10; p.rot = la;
-        p.vx = Math.min(14, p.vx + 0.5);
-      } else {
-        crashed = true; crashT = 80; say('WIPEOUT');
+    // Downhill movement
+    distance += speed * delta;
+
+    // Jump physics
+    if (jumping) {
+      jumpHeight += jumpVelocity * delta;
+      jumpVelocity -= 22 * delta;
+
+      if (jumpHeight <= 0) {
+        jumpHeight = 0;
+        jumping = false;
+
+        if (flipping) {
+          // An incomplete flip earns no points.
+          flipping = false;
+          body.rotation.x = 0;
+          document.getElementById("status").textContent =
+            "TRICK FAILED!";
+        } else {
+          document.getElementById("status").textContent = "LANDED!";
+        }
       }
+
+      updateFlip(delta);
+    }
+
+    // Player position
+    const groundY = terrainHeight(playerX, distance);
+
+    player.position.set(
+      playerX,
+      groundY + jumpHeight,
+      distance
+    );
+
+    // Lean into turns
+    body.rotation.z = THREE.MathUtils.lerp(
+      body.rotation.z,
+      -playerX * 0.012,
+      delta * 4
+    );
+
+    if (flipping) {
+      // Keep the flip animation in control of the X rotation.
+    } else if (!jumping) {
+      body.rotation.x = 0;
+    }
+
+    // Camera follows skier
+    camera.position.set(
+      playerX * 0.65,
+      groundY + 7 + jumpHeight * 0.5,
+      distance - 12
+    );
+
+    camera.lookAt(
+      playerX * 0.5,
+      groundY + 2,
+      distance + 13
+    );
+
+    // Score for distance
+    document.getElementById("score").textContent =
+      score.toLocaleString();
+
+    document.getElementById("speed").textContent =
+      Math.round(speed * 3.6);
+
+    document.getElementById("tricks").textContent = tricks;
+
+    // Collision with rocks
+    if (!jumping) {
+      mountainObjects.forEach(obj => {
+        if (obj.geometry?.type === "DodecahedronGeometry") {
+          const dx = obj.position.x - playerX;
+          const dz = obj.position.z - distance;
+
+          if (Math.abs(dx) < 1.1 && Math.abs(dz) < 1.5) {
+            speed *= 0.4;
+            document.getElementById("status").textContent =
+              "OUCH! HIT A ROCK!";
+          }
+        }
+      });
+    }
+
+    // Finish line
+    if (distance >= courseLength) {
+      finishGame();
     }
   }
+
+  renderer.render(scene, camera);
 }
 
-function draw() {
-  ctx.clearRect(0, 0, W, H);
-  const camX = p.x - 250, camY = p.y - 250;
+// ---------------------------------
+// START
+// ---------------------------------
 
-  // Mountains backdrop
-  ctx.fillStyle = '#a9c8e8';
-  for (let i = -1; i < 6; i++) {
-    const bx = i * 300 - (camX * 0.2) % 300;
-    ctx.beginPath(); ctx.moveTo(bx, H); ctx.lineTo(bx + 150, 120); ctx.lineTo(bx + 300, H); ctx.fill();
-  }
+loadMap();
 
-  // Snow
-  ctx.beginPath(); ctx.moveTo(0, H);
-  for (let sx = 0; sx <= W; sx += 6) ctx.lineTo(sx, groundY(sx + camX) - camY);
-  ctx.lineTo(W, H); ctx.closePath();
-  ctx.fillStyle = '#fff'; ctx.fill();
-  ctx.strokeStyle = '#8fb4d9'; ctx.lineWidth = 3; ctx.stroke();
+player.position.set(0, terrainHeight(0, 0), 0);
 
-  // Rider
-  ctx.save();
-  ctx.translate(p.x - camX, p.y - camY);
-  ctx.rotate(p.rot);
-  ctx.fillStyle = crashed ? '#999' : '#e63946';
-  ctx.fillRect(-8, -22, 16, 22);             // body
-  ctx.fillStyle = '#ffd6a5';
-  ctx.beginPath(); ctx.arc(0, -28, 7, 0, 7); ctx.fill(); // head
-  ctx.fillStyle = '#222';
-  ctx.fillRect(-26, 0, 52, 4);               // skis
-  ctx.restore();
+camera.position.set(0, 12, -12);
+camera.lookAt(0, 10, 20);
 
-  // HUD
-  ctx.fillStyle = '#0b1d33'; ctx.font = 'bold 20px sans-serif';
-  ctx.fillText('Score ' + score, 16, 28);
-  ctx.fillText('Best ' + best, 16, 54);
-  ctx.fillText('Speed ' + p.vx.toFixed(1), 16, 80);
-  ctx.font = '13px sans-serif';
-  ctx.fillText('SPACE jump · ←/→ spin in air · ↓ speed up · ↑ slow down', 16, H - 14);
-  if (msgT-- > 0) {
-    ctx.font = 'bold 36px sans-serif'; ctx.textAlign = 'center';
-    ctx.fillText(msg, W / 2, 120); ctx.textAlign = 'left';
-  }
-}
+requestAnimationFrame(animate);
 
-(function loop() { update(); draw(); requestAnimationFrame(loop); })();
+// Window resize
+window.addEventListener("resize", () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
 </script>
 </body>
 </html>
